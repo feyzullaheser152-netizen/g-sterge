@@ -1,11 +1,12 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.3.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v5.4.0 | 1 dakika piyasa gostergesi
 // Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
 // Gosterge piyasayi anlatir:
 //   1) Piyasa su an islem icin uygun mu (fonlama, asiri mum, likidite)?
 //   2) Fiyat, komisyonu karsilayacak kadar hareket ediyor mu?
 //   3) Son 15 dakikada sert, saldirgan bir akis oldu mu (kovalama uyarisi)?
 //   4) Onumuzdeki dakikalarda fiyat tipik olarak ne kadar oynar?
+//   5) Siradaki zamanlanmis oynaklik ani (ABD verisi, NY acilisi, FOMC, haftalik vadeli acilisi) ne zaman?
 // Dayanak: 22 Binance vadeli paritesi, 21 ay, ~20 milyon mum (arastirma/BULGULAR.md).
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_boxes_count = 5)
 
@@ -32,6 +33,7 @@ showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, displa
 showWPiv   = input.bool(true, "Haftalık pivot (P)", group = grpV, display = display.none)
 showBox    = input.bool(true, "Beklenen hareket kutusu (%80)", group = grpV, display = display.none)
 showBg     = input.bool(true, "Kovalama uyarısında arka plan", group = grpV, display = display.none)
+showEvBg   = input.bool(true, "Zamanlanmış oynaklık anında arka plan", group = grpV, display = display.none)
 panelPos   = input.string("Sağ üst", "Panel konumu", options = ["Sağ üst", "Sağ alt", "Sol üst", "Sol alt"], group = grpV, display = display.none)
 
 isLimit = entryMode == "Limit (maker)"
@@ -68,7 +70,6 @@ illiq   = volume > 0 ? math.abs(r1) / (volume * close) : 0.0
 illiqS  = math.max(ta.sma(illiq, 20), 1e-15)
 illiqB  = math.exp(ta.ema(math.log(illiqS), 1440))
 liqMult = not na(illiqB) and illiqB > 0 ? math.max(0.5, math.min(3.0, illiqS / illiqB)) : 1.0
-qhMult  = minute(time_close, "UTC") % 15 == 0 ? 1.5 : 1.0
 
 // Akis: BVC tahmini delta (gercek taker deltasiyla korelasyon ~0,67) ve 15 dk hareketin z-skoru
 dp      = close - close[1]
@@ -102,6 +103,47 @@ minsSince   = (hUtc % fundHours) * 60 + minute(time, "UTC")
 fundPeriod  = fundHours * 60
 nearFunding = fundBlock > 0 and (minsSince < fundBlock or minsSince >= fundPeriod - fundBlock)
 
+// Zamanlanmis oynaklik anlari: 22 paritede 2025 ve 2026'da tutarli sicramalar (arastirma/BULGULAR.md, bolum 8)
+// Saatler New York yerel saatiyle; ABD yaz/kis saati otomatik. dayofweek: 1 = Pazar, 2 = Pazartesi ... 7 = Cumartesi
+NY = "America/New_York"
+var array<int> nyHol = array.from(20261126, 20261225, 20270101, 20270118, 20270215, 20270326, 20270531, 20270618, 20270705, 20270906, 20271125, 20271224)
+var array<int> fomcDays = array.from(20261028, 20261209, 20270127, 20270317, 20270428, 20270609, 20270728, 20270915, 20271027, 20271208)
+etMin  = hour(time, NY) * 60 + minute(time, NY)
+etDow  = dayofweek(time, NY)
+etYmd  = year(time, NY) * 10000 + month(time, NY) * 100 + dayofmonth(time, NY)
+isHol  = array.includes(nyHol, etYmd)
+isFomc = array.includes(fomcDays, etYmd)
+wkDay  = etDow >= 2 and etDow <= 6
+// Pencereler: olaydan 2 dk once baslar, sicramanin surdugu dakikalarda devam eder
+evData = not isHol and etDow >= 3 and etDow <= 6 and etMin >= 508 and etMin <= 512
+evOpen = not isHol and wkDay and etMin >= 568 and etMin <= 574
+evTen  = not isHol and wkDay and etMin >= 598 and etMin <= 602
+evSun  = etDow == 1 and etMin >= 1078 and etMin <= 1083
+evFomc = isFomc and etMin >= 835 and etMin <= 884
+evTxt  = evFomc ? "FOMC açıklaması" : evData ? "ABD veri dakikası (08:30 ET)" : evOpen ? "NY borsa açılışı" : evTen ? "ABD verisi (10:00 ET)" : evSun ? "Haftalık vadeli açılışı" : ""
+
+// Belirli gun ve saatteki bir sonraki olayin zamani (en fazla 7 gun ileri), tatiller atlanabilir
+nextEvent(int evH, int evM, string days, bool skipHol) =>
+    int best = na
+    todayNoon = timestamp(NY, year(time, NY), month(time, NY), dayofmonth(time, NY), 12, 0)
+    for d = 0 to 7
+        dn = todayNoon + d * 86400000
+        ymd = year(dn, NY) * 10000 + month(dn, NY) * 100 + dayofmonth(dn, NY)
+        evT = timestamp(NY, year(dn, NY), month(dn, NY), dayofmonth(dn, NY), evH, evM)
+        okDay = str.contains(days, str.tostring(dayofweek(dn, NY))) and not (skipHol and array.includes(nyHol, ymd))
+        if na(best) and okDay and evT >= time
+            best := evT
+    best
+
+// Bir sonraki FOMC aciklamasi (14:00 ET)
+nextFomc() =>
+    int best = na
+    for ymd in fomcDays
+        evT = timestamp(NY, int(math.floor(ymd / 10000)), int(math.floor((ymd % 10000) / 100)), ymd % 100, 14, 0)
+        if na(best) and evT >= time
+            best := evT
+    best
+
 // Beklenen hareket: 1 dk getirinin 30 mumluk EWMA varyansi (22 paritede kalibre; %50 dilim 0.61, %80 dilim 1.23)
 ewVar = ta.ema(nz(r1 * r1), 30)
 sigH  = math.sqrt(ewVar * horizon)
@@ -109,7 +151,7 @@ em50  = 0.61 * sigH
 em80  = 1.23 * sigH
 
 // Hareket / maliyet: ufuktaki tipik hareket (%50 dilim), gidis-donus maliyetinin kac kati
-takerX   = takerFee + slipSide * liqMult * qhMult
+takerX   = takerFee + slipSide * liqMult
 entryX   = isLimit ? makerFee : takerX
 costPct  = entryX + takerX
 moveCost = costPct > 0 ? em50 * 100 / costPct : na
@@ -117,9 +159,9 @@ moveCost = costPct > 0 ? em50 * 100 / costPct : na
 // Genel durum
 wrongTf = timeframe.period != "1"
 noVol   = not (volMa > 0)
-redTxt  = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : nearFunding ? "Fonlama saati" : spikeActive ? "Aşırı mum" : moveCost < 1 ? "Hareket maliyetten küçük" : ""
+redTxt  = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : evFomc ? "FOMC açıklaması" : nearFunding ? "Fonlama saati" : spikeActive ? "Aşırı mum" : moveCost < 1 ? "Hareket maliyetten küçük" : ""
 isRed   = redTxt != ""
-yelTxt  = moveCost < 2 ? "Hareket maliyete yakın" : liqMult > 1.5 ? "Likidite ince" : warnLong and warnShort ? "İki yönde sert akış" : ""
+yelTxt  = evTxt != "" ? evTxt : moveCost < 2 ? "Hareket maliyete yakın" : liqMult > 1.5 ? "Likidite ince" : warnLong and warnShort ? "İki yönde sert akış" : ""
 isYel   = not isRed and yelTxt != ""
 
 // === Cizimler ===
@@ -132,6 +174,7 @@ plot(showLevels ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, p
 plot(showLevels ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr, display = display.pane)
 plot(showWPiv ? wPivot : na, "Haftalık pivot (P)", color.new(color.aqua, 20), 2, plot.style_linebr, display = display.pane)
 bgcolor(showBg and (warnLong or warnShort) ? color.new(color.orange, 88) : na, title = "Kovalama uyarısı")
+bgcolor(showEvBg and evTxt != "" ? color.new(color.purple, 85) : na, title = "Zamanlanmış oynaklık anı")
 
 var box emBox = na
 if showBox and barstate.islast
@@ -145,7 +188,7 @@ alertcondition(isRed[1] and not isRed, "VSP: Koşullar düzeldi", "VSP: Piyasa k
 
 // === Panel ===
 pos = panelPos == "Sağ üst" ? position.top_right : panelPos == "Sağ alt" ? position.bottom_right : panelPos == "Sol üst" ? position.top_left : position.bottom_left
-var table panel = table.new(pos, 2, 10, bgcolor = color.new(color.black, 15), border_width = 1)
+var table panel = table.new(pos, 2, 11, bgcolor = color.new(color.black, 15), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
     table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
@@ -164,13 +207,41 @@ if barstate.islast
     cell(2, "Beklenen hareket (" + str.tostring(horizon) + " dk)", "%50: ±%" + str.tostring(em50 * 100, "0.00") + " | %80: ±%" + str.tostring(em80 * 100, "0.00"), cMid)
     flowTxt = warnLong and warnShort ? "İki yönde sert akış" : warnLong ? "Sert alış: LONG kovalamayın" : warnShort ? "Sert satış: SHORT kovalamayın" : "Normal"
     cell(3, "Son 15 dk akış (delta " + str.tostring(imb15 * 100, "0") + "%, z " + str.tostring(z15, "0.0") + ")", flowTxt, warnLong or warnShort ? cWarn : cMid)
-    cell(4, "Fonlama", nearFunding ? "Şimdi" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? cBad : cMid)
-    cell(5, "Oynaklık (1 dk ATR)", "%" + str.tostring(atr / close * 100, "0.000") + (spikeActive ? " | aşırı mum" : " | normal"), spikeActive ? cBad : cMid)
-    cell(6, "Likidite (kayma çarpanı)", (liqMult > 1.5 ? "İnce" : "Normal") + " (x" + str.tostring(liqMult * qhMult, "0.0") + ")", liqMult > 1.5 ? cWarn : cMid)
+    tD = nextEvent(8, 30, "3456", true)
+    tO = nextEvent(9, 30, "23456", true)
+    tT = nextEvent(10, 0, "23456", true)
+    tS = nextEvent(18, 0, "1", false)
+    tF = nextFomc()
+    nxT = tD
+    nxN = "ABD verisi (08:30 ET)"
+    nxK = "veri günü ×2–3, veri yoksa ≈×1"
+    if not na(tO) and (na(nxT) or tO < nxT)
+        nxT := tO
+        nxN := "NY borsa açılışı (09:30 ET)"
+        nxK := "×2, ilk saat ×1,6–1,7"
+    if not na(tT) and (na(nxT) or tT < nxT)
+        nxT := tT
+        nxN := "ABD verisi (10:00 ET)"
+        nxK := "×2"
+    if not na(tS) and (na(nxT) or tS < nxT)
+        nxT := tS
+        nxN := "Haftalık vadeli açılışı (Pazar 18:00 ET)"
+        nxK := "×2–3, 4 dk"
+    if not na(tF) and (na(nxT) or tF < nxT)
+        nxT := tF
+        nxN := "FOMC (14:00 ET)"
+        nxK := "×4–6, 14:30'da basın toplantısı ×2–3"
+    nxMin = na(nxT) ? na : math.round((nxT - time) / 60000)
+    nxWhen = na(nxT) ? "-" : nxMin <= 0 ? "şimdi" : nxMin < 60 ? str.tostring(nxMin) + " dk sonra" : nxMin < 1440 ? str.tostring(math.floor(nxMin / 60)) + " sa " + str.tostring(nxMin % 60) + " dk sonra" : str.format_time(nxT, "dd.MM", "Europe/Istanbul")
+    nxTxt = na(nxT) ? "Yok" : nxN + " | " + str.format_time(nxT, "HH:mm", "Europe/Istanbul") + " TSİ | " + nxWhen + " | " + nxK
+    cell(4, "Sıradaki oynaklık anı", evTxt != "" ? "ŞİMDİ: " + evTxt : nxTxt, evTxt != "" ? cWarn : not na(nxMin) and nxMin <= 15 ? cWarn : cMid)
+    cell(5, "Fonlama", nearFunding ? "Şimdi" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? cBad : cMid)
+    cell(6, "Oynaklık (1 dk ATR)", "%" + str.tostring(atr / close * 100, "0.000") + (spikeActive ? " | aşırı mum" : " | normal"), spikeActive ? cBad : cMid)
+    cell(7, "Likidite (kayma çarpanı)", (liqMult > 1.5 ? "İnce" : "Normal") + " (x" + str.tostring(liqMult, "0.0") + ")", liqMult > 1.5 ? cWarn : cMid)
     ctxTxt = (htfClose > htfEma ? "Üst ZD yukarı" : "Üst ZD aşağı") + ", fiyat VWAP " + (close > vwapV ? "üstünde" : "altında")
-    cell(7, "Bağlam (bilgi, sinyal değil)", ctxTxt, cMid)
+    cell(8, "Bağlam (bilgi, sinyal değil)", ctxTxt, cMid)
     wDist = (close - wPivot) / wPivot * 100
-    cell(8, "Haftalık pivot (P)", str.tostring(wPivot, format.mintick) + " (" + (wDist >= 0 ? "fiyat %" + str.tostring(wDist, "0.00") + " üstünde" : "fiyat %" + str.tostring(-wDist, "0.00") + " altında") + ")", color.aqua)
+    cell(9, "Haftalık pivot (P)", str.tostring(wPivot, format.mintick) + " (" + (wDist >= 0 ? "fiyat %" + str.tostring(wDist, "0.00") + " üstünde" : "fiyat %" + str.tostring(-wDist, "0.00") + " altında") + ")", color.aqua)
     warnTxt = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : "Yok"
-    cell(9, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : cWarn)
+    cell(10, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : cWarn)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir

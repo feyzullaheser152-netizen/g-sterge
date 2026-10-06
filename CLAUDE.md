@@ -16,6 +16,14 @@ TradingView için 1 dakikalık kripto vadeli işlem göstergesi (Pine Script v6)
 - Dürüst ol: Net getiri, komisyon ve kayma etkisi ile sonuçların güvenilirliği hakkında abartma.
 - Kodu sohbete yapıştırma. Kullanıcıya GitHub'daki dosyanın **Raw** bağlantısını ver (Yol 1: Raw → Ctrl+A → Ctrl+C → Pine Düzenleyici'de Ctrl+A → Ctrl+V).
 
+## Kullanıcının ortamı
+
+- TradingView **ücretsiz plan**:
+  - 1 dk grafikte yaklaşık 5.000 mum geçmiş var.
+  - Saniye verisi yok, bu yüzden gerçek delta kullanılamaz.
+  - Gösterge alarmları büyük olasılıkla kullanılamaz.
+  - Göstergeyi bu sınırlara göre tasarla.
+
 ## Kod kuralları
 
 - Pine Script v6 kullan. Satır kaydırma kullanma; her ifade tek satırda olsun.

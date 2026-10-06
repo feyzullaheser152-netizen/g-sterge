@@ -202,3 +202,65 @@ Fark maliyetin çok altında.
 Notlar:
 - Topluluk göstergelerinin yön sinyali veren kısımları (SuperTrend, UT Bot, WaveTrend, Squeeze Momentum, VuManChu, Lorentzian vb.) bölüm 6'da test edilen osilatör ve trend ailelerinden oluşur. Ayrıca test edilmedi.
 - Nadaraya-Watson'ın orijinal sürümü geçmişi yeniden çizer (repaint).
+
+## 8. Coine özel / piyasa geneli ayrımı ve zamanlanmış oynaklık anları (v5.4; çoklu ajan analizi ve bağımsız doğrulama)
+
+### 8a. "Hareket coine mi özel, piyasa geneli mi?" (`coin_vs_market*.py`, doğrulama `dogrula/verify_cvm*.py`)
+
+**Yöntem:**
+- BTC dışındaki 21 paritede sert akışlı 15 dk hareketler alındı (|z15| ≥ 3, akış aynı yönde ≥ 0,15).
+- Hareketler, aynı anda BTC'nin 15 dk z-skoruna göre sınıflandırıldı:
+  - **Piyasa geneli:** BTC aynı yönde ≥ 1,5.
+  - **Coine özel:** |BTC| < 0,75.
+  - **Karışık:** Diğerleri.
+- Bağımsız doğrulama 68.695 olayın tamamını birebir yeniden üretti.
+
+**Sonuçlar:**
+- **Sınıflar arası fark:** Coine özel ile piyasa geneli arasındaki 15 dk dönüş farkı iki yılda ve iki delta türünde de anlamsız (|güne göre kümelenmiş t| ≤ 1,4). İşareti de tutarsız.
+- **2025 piyasa geneli:** +4,1 bp'nin neredeyse tamamı 10 Ekim 2025 çöküşünden geliyor. O gün hariç tutulunca +1,9 bp (tG 0,7) kalıyor.
+- **2026 piyasa geneli:** +4,0 bp'nin yaklaşık dörtte üçü BTC'nin kendi dönüşü; BTC'ye göre hedge edilmiş getiri +1,1 bp.
+- **Coine özel:** BTC'ye göre hedge edilmiş getiri +3–4 bp ile sınırda anlamlı (tG 1,8–1,9). Ancak göstergenin BVC deltasıyla 2026'da kayboluyor ve hedge iki bacak gerektirdiği için maliyet iki katına çıkıyor.
+
+**Karar:** Göstergeye eklenmedi.
+
+### 8b. Zamanlanmış oynaklık anları (`zaman_oynak*.py`, doğrulama `dogrula/zv_*.py`)
+
+**Yöntem:**
+- Normalize 1 dk hareket: x = |r1| / σ_önceki (EWMA 1440, bir mum gecikmeli).
+- Dakika profili UTC ve New York saatinde ayrı ayrı çıkarıldı; hafta içi ve hafta sonu ayrı tutuldu.
+- Hafta içinde iki yılda da ≥ ×1,5 olan dakikaların **hepsi** New York saatine bağlı. UTC'de görünen sıçramalar, aynı olayların yaz/kış saatiyle 1 saat kayan kopyası.
+- Doğrulayıcı rakamları üç farklı normalizasyonla yeniden üretti (EWMA σ, Pine'daki 1440 mumluk std, haftalık taban).
+
+| Olay | 2025 | 2026 | Not |
+|---|---|---|---|
+| ABD verisi 08:30 ET (Sal–Cum) | ×2,1–2,6 | ×1,8–2,0 | Etki veri günlerinde yoğunlaşıyor. Gün medyanı ×1,0–1,4; fazlalığın %70'i günlerin %10'undan geliyor. Pazartesi ×1,1–1,2. Süre 2–3 dk. |
+| NY borsa açılışı 09:30 ET (Pzt–Cum) | ×2,0, 09:31'de ×2,3 | ×2,0, 09:31'de ×2,2 | 09:30–10:30 arası ×1,6–1,7. NYSE tatillerinde kayboluyor. |
+| ABD verisi 10:00 ET (Pzt–Cum) | ×2,0 | ×1,9 | Açılış bloğunun içinde; yerel sıçrama ×1,2–1,3. Cuma ×2,4. |
+| Haftalık vadeli açılışı, Pazar 18:00 ET | ×2,1 | ×3,6 | Kaynağı Globex endeks/döviz vadelileri. CME kripto 29 Mayıs 2026'da 7/24'e geçtikten sonra da sürüyor. |
+| FOMC 14:00 ET (yalnızca FOMC günü) | medyan ×5,6 | medyan ×4,3 | Örnek küçük (8 / 6 gün), ama 14 günün 14'ünde ×1,5'in üstünde. 14:30 basın toplantısında ×2–3. 13:59 FOMC günlerinde sakin değil. |
+
+**Eşiği iki yılda geçmeyenler:**
+
+| Dakika | Çarpan |
+|---|---|
+| Fonlama dakikaları (00/08/16 UTC) | ×1,07–1,47 |
+| 16:00 ET | ×1,2–1,3 |
+| Hafta içi 18:00 ET | ×1,4 |
+| Çeyrek saat başları | ×1,03–1,20 |
+
+**Göstergeye etkisi:**
+- Çeyrek saat sonuçlarına göre v3.0'dan beri kullanılan "çeyrek saat kayma çarpanı ×1,5" kanıtsızdı. v5.4'te kaldırıldı.
+- Zamanlanmış olaylar "Sıradaki oynaklık anı" satırı, arka plan rengi ve DURUM uyarısı olarak eklendi (v5.4).
+- Bu bilgi yön söylemez; yalnızca o dakikalarda oynaklığın ve kaymanın arttığını bildirir.
+
+### 8c. Literatür ve TradingView ücretsiz plan (araştırma ajanı)
+
+**Literatür:**
+- **FOMC:** BTC'nin saatlik mutlak getirisi açıklama saatinde yaklaşık 1,9 kat artıyor ("Scheduled FOMC statements and intraday macro event risk in cryptocurrency markets", FRL 2026).
+- **Spot ETF dönemi:** BTC'nin gün içi oynaklık tepeleri NY saatine bağlı. Saat, oynaklığı ve hacmi öngörüyor ama **yönü öngörmüyor** ("Keeping New York's hours", SSRN 2026; "Bitcoin on Wall Street Time", JRFM 2026).
+- **Kripto dönüşü ve maliyet:** Kriptoda 15 dk dönüşün büyük kısmı coine özel. Ancak brüt kenar işlem başına 1,3 bp, maliyet 5 bp (arXiv 2608.21888). Bu, 8a'daki bulguyla çelişmiyor: Dönüş var, ama sınıflandırma onu maliyeti aşacak ölçüde ayırmıyor.
+
+**Ücretsiz plan:**
+- Grafikte en fazla 5.000 mum yükleniyor. 1 dk grafikte bu yaklaşık 3,5 gün demek; ilk 1–1,5 gün ısınma dönemi.
+- request.* çağrıları için sınır 40; VSP 5 tane kullanıyor.
+- Gösterge (teknik) alarmları ücretsiz planda büyük olasılıkla kullanılamıyor. Bu yüzden VSP'nin uyarıları grafikte görsel olarak verilir.
