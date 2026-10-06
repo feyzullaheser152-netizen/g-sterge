@@ -15,6 +15,10 @@ TradingView için 1 dakikalık kripto vadeli işlem göstergesi (Pine Script v6)
 - Her sohbetin sonunda, Tanım veya Talimat kartında değişiklik olduysa `KARTLAR.md` dosyasını güncelle ve kartların güncel hâlini yanıtta ver.
 - Dürüst ol: Net getiri, komisyon ve kayma etkisi ile sonuçların güvenilirliği hakkında abartma.
 - Kodu sohbete yapıştırma. Kullanıcıya GitHub'daki dosyanın **Raw** bağlantısını ver (Yol 1: Raw → Ctrl+A → Ctrl+C → Pine Düzenleyici'de Ctrl+A → Ctrl+V).
+- **Gösterge hiçbir zaman "bitti" sayılmaz.** Piyasa zamanla değişir; bu değişim gelişme ya da bozulma biçiminde olur. Göstergenin dayandığı her bulgu yeni veriyle düzenli olarak yeniden sınanmalı:
+  - Her yeni geliştirme oturumunun başında, son çalıştırma bir aydan eskiyse `python3 arastirma/izleme.py guncelle` ve `python3 arastirma/izleme.py rapor` komutlarını çalıştır. `arastirma/IZLEME.md` dosyasındaki durum tablosunu kullanıcıya kısaca bildir.
+  - "ZAYIFLADI" ya da "BOZULDU" çıkan özelliği ön kayıtlı testle yeniden sına. İki ardışık tam ay penceresinde BOZULDU kalırsa göstergeden çıkar.
+  - Göstergede olmayan ama izlenen ölçüler eşiği geçerse (ör. LONG kovalama, fonlama), yeni bir özellik adayı olarak test et.
 
 ## Kullanıcının ortamı
 

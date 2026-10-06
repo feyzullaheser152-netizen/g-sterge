@@ -444,3 +444,28 @@ Olay: Önceki 15 mumda aynı yönde akış olmayan ilk sert akış mumu (Pine'da
 - Bağlam satırı (15 dk EMA50, VWAP konumu) kaldırıldı; bölüm 6'ya göre trend göstergeleri yön bilgisi vermiyor.
 - Çizgiler varsayılan olarak en kalın (4) ve karanlık mod için açık renkli.
 - `request.*` çağrısı 3'ten 2'ye indi.
+
+## 11. Sürekli izleme (v5.6.1; `izleme.py`, `IZLEME.md`)
+
+Piyasa değişir: Bir bulgu zamanla güçlenebilir ya da bozulabilir. Bu yüzden göstergenin dayandığı her ölçü ay ay yeniden hesaplanır.
+
+- **Araç:** `arastirma/izleme.py`
+  - `guncelle` komutu, data.binance.vision'dan eksik 1 dk mumları indirir. İlk eksik günde durur, böylece kalıcı boşluk oluşmaz.
+  - `rapor` komutu, aylık ölçümleri hesaplayıp `arastirma/IZLEME.md` dosyasını yazar.
+  - Araştırma betiklerinin kullandığı veri değiştirilmez; izleme verisi ayrı bir klasörde tutulur.
+- **Tanımlar** VSP.pine ve bölüm 10 ile aynıdır: aşırı mum olay bazlı, tatil listeleri Pine'daki gibi.
+- **Durum pencereleri** yalnızca tam aylardan oluşur:
+  - Kapsama ve mor özellikler için son 3 tam ay.
+  - Turuncu uyarı ve FOMC için son 12 tam ay. 3 aylık turuncu ortalamasının standart hatası 2–5 bp olduğundan, 3 aylık pencere geçmişte iki kez yanlış "ZAYIFLADI" verirdi.
+- **Kaldırma kuralı:** İki ardışık tam ay penceresinde BOZULDU olan özellik çıkarılır. Tek pencerede bozuk çıkarsa ön kayıtlı testle yeniden sınanır.
+- **Bekleyen ön kayıtlı test:** 10d'deki karışım oynaklık tahmini. Yalnızca tam 2026-10, 2026-11 ve 2026-12 aylarıyla, bir kez değerlendirilecek.
+- **Bağımsız denetim:** Ayrı kodla 2026-09 rakamları birebir yeniden üretildi (turuncu +5,89 bp, n 1171; 08:30 ×4,24; %80 kapsama %79,5). Denetimin bulduğu durum kuralı sorunları düzeltildi.
+
+**İlk rapor (veri 2025-01 – 2026-10-05):**
+- Göstergedeki bütün özellikler son tam pencerelerde tutuyor. Turuncu uyarı, son 12 ayda 5 dk'da +3,7 bp (t 2,2; paritelerin %100'ü).
+- Zaman içindeki eğilimler:
+  - **Aşırı mum sonrası oynaklık azalıyor:** 2025'te çoğunlukla ×2,0–2,3; 2026'da ×1,6–2,2; son 3 ay ×1,56–1,75. Eşiğe en yakın özellik bu.
+  - **08:30 ABD verisi** aydan aya çok değişiyor (×1,1–5,5); önemli veri olan aylarda yüksek. 2026 Ocak–Nisan ×1,4–1,9 arasında kaldı.
+  - **%50 bandı:** 2025'te %47–49, 2026'da %50–53 kapsıyor. Tolerans içinde ama yön değiştirmiş.
+  - **Turuncu uyarı** aydan aya gürültülü (−5 ile +15 bp). Tek ay sonucu tek başına karar için yetmez.
+  - Fonlama dakikaları bütün aylarda ×0,9–1,3; LONG kovalamada kalıcı bir etki yok (12 ayda +1,2 bp, t 0,9).

@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.6.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v5.6.1 | 1 dakika piyasa gostergesi
 // Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
 // Grafikte tablo ya da kutu yoktur. Bilgi uc yoldan verilir:
 //   1) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
@@ -50,7 +50,8 @@ isLimit = entryMode == "Limit (maker)"
 
 // === Hesaplar ===
 atr = ta.atr(14)
-[vwapV, vwapU, vwapL] = ta.vwap(hlc3, timeframe.change("D"), 2.0)
+newDay = timeframe.change("D")
+[vwapV, vwapU, vwapL] = ta.vwap(hlc3, newDay, 2.0)
 
 pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
 pdl = request.security(syminfo.tickerid, "D", low[1], lookahead = barmerge.lookahead_on)
@@ -165,11 +166,13 @@ nxMin = nxT < 9e15 ? math.round((nxT - time) / 60000) : na
 fomcDay = na(tF) ? na : math.floor((tF - time) / 86400000)
 
 // === Cizimler (en kalin, acik renkler) ===
-plot(showLevels ? vwapV : na, "VWAP", cVwap, 4, display = display.pane)
-plot(showLevels ? vwapU : na, "VWAP +2σ", cBand, 4, linestyle = plot.linestyle_dashed, display = display.pane)
-plot(showLevels ? vwapL : na, "VWAP -2σ", cBand, 4, linestyle = plot.linestyle_dashed, display = display.pane)
-plot(showLevels ? pdh : na, "Önceki gün yüksek", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
-plot(showLevels ? pdl : na, "Önceki gün düşük", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
+// Gun degisiminde (00:00 UTC) ilk mumda cizgi kesilir; boylece eski ve yeni gun degerleri dikey bir cizgiyle birlesmez
+dayOn = showLevels and not newDay
+plot(dayOn ? vwapV : na, "VWAP", cVwap, 4, plot.style_linebr, display = display.pane)
+plot(dayOn ? vwapU : na, "VWAP +2σ", cBand, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
+plot(dayOn ? vwapL : na, "VWAP -2σ", cBand, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
+plot(dayOn ? pdh : na, "Önceki gün yüksek", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
+plot(dayOn ? pdl : na, "Önceki gün düşük", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
 plot(showLevels ? asiaHi : na, "Asya yüksek", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 plot(showLevels ? asiaLo : na, "Asya düşük", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 
