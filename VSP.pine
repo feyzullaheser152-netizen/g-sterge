@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.2.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v5.3.0 | 1 dakika piyasa gostergesi
 // Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
 // Gosterge piyasayi anlatir:
 //   1) Piyasa su an islem icin uygun mu (fonlama, asiri mum, likidite)?
@@ -29,6 +29,7 @@ htf       = input.timeframe("15", "Bağlam için üst zaman dilimi", group = grp
 
 grpV = "Görünüm"
 showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, display = display.none)
+showWPiv   = input.bool(true, "Haftalık pivot (P)", group = grpV, display = display.none)
 showBox    = input.bool(true, "Beklenen hareket kutusu (%80)", group = grpV, display = display.none)
 showBg     = input.bool(true, "Kovalama uyarısında arka plan", group = grpV, display = display.none)
 panelPos   = input.string("Sağ üst", "Panel konumu", options = ["Sağ üst", "Sağ alt", "Sol üst", "Sol alt"], group = grpV, display = display.none)
@@ -41,6 +42,8 @@ atr = ta.atr(14)
 
 pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
 pdl = request.security(syminfo.tickerid, "D", low[1], lookahead = barmerge.lookahead_on)
+// Haftalik pivot (P): 22 paritede rastgele seviyelere gore daha cok tutan tek seviye (arastirma/BULGULAR.md, bolum 7)
+wPivot = request.security(syminfo.tickerid, "W", hlc3[1], lookahead = barmerge.lookahead_on)
 htfEma   = request.security(syminfo.tickerid, htf, ta.ema(close, 50)[1], lookahead = barmerge.lookahead_on)
 htfClose = request.security(syminfo.tickerid, htf, close[1], lookahead = barmerge.lookahead_on)
 
@@ -127,6 +130,7 @@ plot(showLevels ? pdh : na, "Önceki gün yüksek", color.new(color.gray, 20), 1
 plot(showLevels ? pdl : na, "Önceki gün düşük", color.new(color.gray, 20), 1, plot.style_linebr, display = display.pane)
 plot(showLevels ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, plot.style_linebr, display = display.pane)
 plot(showLevels ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr, display = display.pane)
+plot(showWPiv ? wPivot : na, "Haftalık pivot (P)", color.new(color.aqua, 20), 2, plot.style_linebr, display = display.pane)
 bgcolor(showBg and (warnLong or warnShort) ? color.new(color.orange, 88) : na, title = "Kovalama uyarısı")
 
 var box emBox = na
@@ -141,7 +145,7 @@ alertcondition(isRed[1] and not isRed, "VSP: Koşullar düzeldi", "VSP: Piyasa k
 
 // === Panel ===
 pos = panelPos == "Sağ üst" ? position.top_right : panelPos == "Sağ alt" ? position.bottom_right : panelPos == "Sol üst" ? position.top_left : position.bottom_left
-var table panel = table.new(pos, 2, 9, bgcolor = color.new(color.black, 15), border_width = 1)
+var table panel = table.new(pos, 2, 10, bgcolor = color.new(color.black, 15), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
     table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
@@ -165,6 +169,8 @@ if barstate.islast
     cell(6, "Likidite (kayma çarpanı)", (liqMult > 1.5 ? "İnce" : "Normal") + " (x" + str.tostring(liqMult * qhMult, "0.0") + ")", liqMult > 1.5 ? cWarn : cMid)
     ctxTxt = (htfClose > htfEma ? "Üst ZD yukarı" : "Üst ZD aşağı") + ", fiyat VWAP " + (close > vwapV ? "üstünde" : "altında")
     cell(7, "Bağlam (bilgi, sinyal değil)", ctxTxt, cMid)
+    wDist = (close - wPivot) / wPivot * 100
+    cell(8, "Haftalık pivot (P)", str.tostring(wPivot, format.mintick) + " (" + (wDist >= 0 ? "fiyat %" + str.tostring(wDist, "0.00") + " üstünde" : "fiyat %" + str.tostring(-wDist, "0.00") + " altında") + ")", color.aqua)
     warnTxt = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : "Yok"
-    cell(8, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : cWarn)
+    cell(9, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : cWarn)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir

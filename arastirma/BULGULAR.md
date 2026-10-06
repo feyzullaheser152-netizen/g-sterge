@@ -169,3 +169,36 @@ Göstergede 0,61 ve 1,23 katsayıları kullanılır. HAR benzeri karışım ve s
 Fark maliyetin çok altında.
 
 **Karar:** Listedeki göstergelerden hiçbiri, 1 dakikalık grafikte VSP'nin verdiği bilgiye anlamlı bir şey eklemiyor. Bu yüzden panel sade tutuldu (v5.2).
+
+## 7. Topluluk göstergelerindeki seviye kavramları (`levels.py`; 22 parite)
+
+**Kapsam:**
+- SMC/ICT: FVG, Order Block.
+- Volume Profile: önceki günün POC, VAH ve VAL seviyeleri.
+- HTF Power of Three: gün açılışı.
+- Günlük VWAP.
+- CM Pivot Points MTF: haftalık ve 4 saatlik pivot P.
+- Salınım tepe/dip seviyeleri: Pivot Points High Low, Price Action S/R, Key Levels.
+
+**Ölçüm:**
+- Seviyeye ilk temastan 15 dakika sonra seviyeden geri itilme (bp).
+- Tutma oranı: Kapanışın, seviyenin 0,5σ ötesine geçmeme oranı.
+- Oynaklık: Gerçekleşen oynaklığın tahmine oranı.
+- Karşılaştırma: Gün boyu sabit rastgele seviyeler.
+
+| Seviye | Tepki farkı (2025 / 2026) | Tutma farkı (puan) | Oynaklık (seviye / rastgele) | Sonuç |
+|---|---|---|---|---|
+| Haftalık pivot P | +4,4 / +7,2 bp | +4,8 / +5,0 | 0,94 / 0,99 ve 0,88 / 0,92 | **Tutarlı; göstergeye eklendi (v5.3)** |
+| Önceki gün POC | +1,3 / +1,8 bp | +3,4 / +0,7 | 0,96 / 0,98 | Zayıf |
+| Önceki gün VAH | +0,4 / +1,8 bp | +3,2 / +1,1 | — | Zayıf |
+| Önceki gün VAL | +1,1 / −0,4 bp | +2,5 / +0,1 | — | Tutarsız |
+| FVG | −1,6 / −1,1 bp | −3,6 / −4,1 | — | Rastgele seviyeden **daha sık kırılıyor** |
+| Order Block | −0,4 / +0,2 bp | +0,3 / −0,4 | 0,88 / 0,93 | Fark yok |
+| Salınım tepe/dip | −1,2 / −0,2 bp | −2,1 / −1,3 | — | Biraz daha sık kırılıyor |
+| Gün açılışı | −0,3 / −0,4 bp | −3,2 / −2,6 | 1,04 / 0,98 | Fark yok, temas anında biraz daha oynak |
+| VWAP | −0,2 / −0,4 bp | ≈ 0 | — | Fark yok |
+| 4 saatlik pivot P | +0,1 / +0,5 bp | ≈ 0 | — | Fark yok |
+
+Notlar:
+- Topluluk göstergelerinin yön sinyali veren kısımları (SuperTrend, UT Bot, WaveTrend, Squeeze Momentum, VuManChu, Lorentzian vb.) bölüm 6'da test edilen osilatör ve trend ailelerinden oluşur. Ayrıca test edilmedi.
+- Nadaraya-Watson'ın orijinal sürümü geçmişi yeniden çizer (repaint).

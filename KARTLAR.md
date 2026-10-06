@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v5.2)
+## Tanım Kartı (v5.3)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **piyasayı anlatır**.
@@ -24,12 +24,14 @@
 | Oynaklık (1 dk ATR) | 1 dakikalık ortalama hareket (%). Mum boyu 4 ATR'yi aşarsa 5 mum boyunca "aşırı mum" uyarısı verir. |
 | Likidite (kayma çarpanı) | Amihud ölçüsüne göre piyasanın ince olup olmadığı ve kaymanın kaç kat arttığı. |
 | Bağlam (bilgi, sinyal değil) | 15 dakikalık trend yönü ve fiyatın VWAP'a göre konumu. |
+| Haftalık pivot (P) | Geçen haftanın (yüksek + düşük + kapanış) / 3 seviyesi ve fiyatın bu seviyeye uzaklığı (%). |
 | Uyarı | Yanlış zaman dilimi ya da eksik hacim verisi. |
 
 **Grafikte:**
 - VWAP ve ±2σ bantları.
 - Önceki gün yüksek/düşük (gri).
 - Asya seansı yüksek/düşük (mor).
+- Haftalık pivot P (açık mavi, kalın).
 - Beklenen hareket kutusu (mavi): Seçilen ufukta fiyatın %80 olasılıkla kalacağı aralık.
 - Kovalama uyarısı sırasında turuncu arka plan.
 - Çizgilerin değerleri durum satırını kalabalıklaştırmaz.
@@ -39,6 +41,12 @@
   - 15 dakikalık gerçek hareketlerin %50'si öngörülen oynaklığın 0,61 katı içinde kalır, %80'i 1,23 katı içinde.
   - Bu oranlar 2025 ve 2026'da neredeyse aynıdır.
 - **Kovalama uyarısı:** Saldırgan akışla gelen sert 15 dakikalık hareketten sonra fiyat 5–15 dakika içinde ortalama 1,4–4,7 baz puan geri döner. Bu, paritelerin %77–95'inde ve iki yılda da tutar.
+- **Haftalık pivot:** Fiyat bu seviyeye ilk dokunduğunda, rastgele seviyelere göre 15 dakika içinde 4–7 baz puan daha fazla geri itilir ve %5 daha sık tutunur. Seviyede oynaklık da azalır. Bu fark 22 paritede, iki yılda da görüldü.
+- **Topluluk göstergelerindeki seviyeler (SMC/ICT, Volume Profile, pivotlar):**
+  - FVG, rastgele seviyeden daha sık kırılır.
+  - Order Block, gün açılışı, VWAP ve 4 saatlik pivot rastgele seviyeden farksızdır.
+  - Önceki günün POC seviyesi yalnızca zayıf bir fark gösterir.
+  - Bu yüzden bu seviyeler panele eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 7.
 - **TradingView'in yerleşik göstergeleri (48 gösterge test edildi):**
   - Hiçbiri 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
   - Hiçbiri gelecek 30 dakikanın trend mi yatay mı olacağını öngörmüyor.
