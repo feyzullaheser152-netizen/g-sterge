@@ -61,8 +61,8 @@
   - FVG, rastgele seviyeden daha sık kırılır.
   - Order Block, gün açılışı, VWAP ve 4 saatlik pivot rastgele seviyeden farksızdır.
   - Önceki günün POC seviyesi yalnızca zayıf bir fark gösterir.
-- **"Hareket coine mi özel, piyasa geneli mi?" ayrımı:** 21 altcoinde test edildi; sert hareket sonrası dönüşü iki yılda tutarlı biçimde ayırmıyor. Eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 8.
   - Bu yüzden bu seviyeler panele eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 7.
+- **"Hareket coine mi özel, piyasa geneli mi?" ayrımı:** 21 altcoinde test edildi; sert hareket sonrası dönüşü iki yılda tutarlı biçimde ayırmıyor. Eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 8.
 - **TradingView'in yerleşik göstergeleri (48 gösterge test edildi):**
   - Hiçbiri 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
   - Hiçbiri gelecek 30 dakikanın trend mi yatay mı olacağını öngörmüyor.
