@@ -141,3 +141,31 @@ Göstergede 0,61 ve 1,23 katsayıları kullanılır. HAR benzeri karışım ve s
 |---|---|---|---|---|
 | Gerçek | %49 | %39 | %31,5 | %21 |
 | Teorik 1/(1+R) | %50 | %40 | %33 | %25 |
+
+## 6. TradingView yerleşik göstergeleri (`tvind.py` – `tvind4.py`; 22 parite, 2025 / 2026)
+
+**Yön (15 dk ileri getiri):** Test edilen 48 göstergenin hepsi aynı sonucu verdi:
+- Test edilen göstergeler: RSI, MACD, CCI, Awesome, Aroon, Balance of power, Bull bear power, CMF, Chaikin osc., CMO, Connors RSI, Elder force, Fisher, DPO, %b, Ichimoku, KAMA/Hull/DEMA/EMA eğimi, Donchian, VWMA−SMA, Ease of movement, A/D, BBTrend, Stokastik, Stokastik RSI, Williams %R, MFI, TSI, Ultimate, TRIX, ROC, Momentum, Vortex, Supertrend, Parabolik SAR, OBV, Klinger, Keltner, lineer regresyon, RVI, SMI ergodic, Woodie CCI, PVT, Alligator, McGinley, RCI.
+- **Ters işaret:** "Yukarı" okumanın ardından fiyat hafifçe düşüyor. IC −0,01 ile −0,046 arasında ve bu işaret paritelerin %95–100'ünde tutuyor.
+- **Büyüklük:** %10'luk uç dilimler arasındaki fark yalnızca 0,1–1,2 baz puan. Maliyet 4–12 baz puan.
+- **Sonuç:** 1 dakikalık grafikte bu göstergeler kısa vadeli dönüş etkisinin farklı biçimlerde ölçümüdür. Hiçbiri maliyeti aşan yön bilgisi vermez.
+
+**Oynaklık (sonraki 15 dk gerçekleşen oynaklık, EWMA tahminine ek açıklama gücü):**
+- **ATR (14):** R² +0,04–0,05. Bu artış gerçekleşen oynaklığı (toplam salınımı) açıklıyor. Ancak 15 dk sonraki fiyat konumunu öngörmeyi iyileştirmiyor; log korelasyon 0,255'e karşı 0,251. Bu yüzden göstergeye eklenmedi.
+- **Diğerleri** (Bollinger genişliği, tarihsel oynaklık, Donchian genişliği, Choppiness, ADX, Mass index, Relative volatility index, Ulcer, Relative volume at time): R² artışı ≤ 0,0026.
+
+**Rejim (sonraki 30 dk verimlilik oranı):** ADX, Choppiness, ER, BBTrend ve Aroon ile korelasyon |0,02|'nin altında. Bu göstergeler geçmişi tarif eder, gelecek 30 dakikanın trend mi yatay mı olacağını öngörmez.
+
+**Seans (saat profili) ve ADR:** 60 dk oynaklık tahminine ek açıklama gücü ≤ 0,0024.
+
+**Pivot noktaları (standart, günlük; günün ilk teması, gün boyu sabit rastgele seviyelerle karşılaştırma):** Seviyeden geri itilme farkı:
+
+| Seviye | 2025 | 2026 |
+|---|---|---|
+| P | +0,9 bp | +1,4 bp |
+| R1 | +1,7 bp | +0,1 bp |
+| S1 | +1,7 bp | +2,0 bp |
+
+Fark maliyetin çok altında.
+
+**Karar:** Listedeki göstergelerden hiçbiri, 1 dakikalık grafikte VSP'nin verdiği bilgiye anlamlı bir şey eklemiyor. Bu yüzden panel sade tutuldu (v5.2).

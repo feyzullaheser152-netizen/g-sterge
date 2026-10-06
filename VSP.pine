@@ -1,45 +1,36 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.1.0 | 1 dakika islem kokpiti
-// Gosterge AL/SAT vermez: nereden alip satacaginiza siz karar verirsiniz. Gosterge karar icin bilgi verir:
-//   1) Bu islem komisyonu cikarabilir mi?  2) Piyasa su an uygun mu?  3) Hangi yon kovalanmamali?
-//   4) Kac birim acmaliyim, stop nerede?  5) Fiyat ne kadar oynar, stopum gurultuyle vurulur mu, kac isabet gerekir?
-// Tek kanitli etki: saldirgan akisla gelen 15 dk sert hareketten sonra fiyat 5-15 dk icinde hafifce geri doner.
-indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_lines_count = 10, max_labels_count = 10, max_boxes_count = 5)
+// Vadeli Scalp Pusulasi (VSP) - v5.2.0 | 1 dakika piyasa gostergesi
+// Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
+// Gosterge piyasayi anlatir:
+//   1) Piyasa su an islem icin uygun mu (fonlama, asiri mum, likidite)?
+//   2) Fiyat, komisyonu karsilayacak kadar hareket ediyor mu?
+//   3) Son 15 dakikada sert, saldirgan bir akis oldu mu (kovalama uyarisi)?
+//   4) Onumuzdeki dakikalarda fiyat tipik olarak ne kadar oynar?
+// Dayanak: 22 Binance vadeli paritesi, 21 ay, ~20 milyon mum (arastirma/BULGULAR.md).
+indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_boxes_count = 5)
 
 // === Girdiler ===
-grpA = "Hesap ve risk"
-balance  = input.float(1000, "Hesap bakiyesi (USDT)", minval = 1, group = grpA, display = display.none)
-riskPct  = input.float(0.5, "İşlem başına risk %", minval = 0.05, maxval = 5, step = 0.05, group = grpA, display = display.none)
-stopMode = input.string("Son mumların dibi/tepesi", "Stop yöntemi", options = ["Son mumların dibi/tepesi", "ATR katı"], group = grpA, display = display.none)
-stopLook = input.int(5, "Dip/tepe için mum sayısı", minval = 1, group = grpA, display = display.none)
-stopBuf  = input.float(0.2, "Stop tamponu (ATR x)", step = 0.1, group = grpA, display = display.none)
-stopAtr  = input.float(1.5, "ATR katı stop (ATR x)", step = 0.1, group = grpA, display = display.none)
-minStop  = input.float(0.6, "En dar stop (ATR x)", step = 0.1, group = grpA, display = display.none)
-tpR      = input.float(1.5, "Planlanan hedef (R)", minval = 0.2, step = 0.1, group = grpA, display = display.none)
-holdMin  = input.int(15, "Planlanan tutma süresi (dk)", minval = 1, maxval = 240, group = grpA, display = display.none)
-
-grpE = "Emir ve maliyet"
-entryMode = input.string("Limit (maker)", "Giriş emri", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
+grpE = "Maliyet (hareket / maliyet hesabı için)"
+entryMode = input.string("Limit (maker)", "Giriş emri tipiniz", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
 makerFee  = input.float(0.02, "Maker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 takerFee  = input.float(0.05, "Taker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 slipSide  = input.float(0.01, "Kayma % (tek yön, normal likidite)", step = 0.005, group = grpE, display = display.none)
-maxCostR  = input.float(0.20, "Kabul edilebilir maliyet / risk (R)", step = 0.05, group = grpE, display = display.none)
 
 grpP = "Piyasa koşulu"
 fundHours = input.int(8, "Fonlama aralığı (saat)", options = [1, 2, 4, 8], group = grpP, display = display.none)
-fundBlock = input.int(3, "Fonlama saatine ± dk bekle", minval = 0, group = grpP, display = display.none)
+fundBlock = input.int(3, "Fonlama saatine ± dk uyarı", minval = 0, group = grpP, display = display.none)
 spikeAtr  = input.float(4.0, "Aşırı mum sınırı (ATR x)", step = 0.5, group = grpP, display = display.none)
-spikeWait = input.int(5, "Aşırı mumdan sonra bekleme (mum)", minval = 0, group = grpP, display = display.none)
+spikeWait = input.int(5, "Aşırı mumdan sonra uyarı süresi (mum)", minval = 1, group = grpP, display = display.none)
 flowZ     = input.float(3.0, "Sert hareket eşiği (15 dk z)", step = 0.5, group = grpP, display = display.none)
 flowImb   = input.float(0.15, "Akış dengesizliği eşiği", step = 0.05, group = grpP, display = display.none)
 flowBars  = input.int(15, "Kovalama uyarısı süresi (mum)", minval = 1, group = grpP, display = display.none)
+horizon   = input.int(15, "Beklenen hareket ufku (dk)", minval = 1, maxval = 240, group = grpP, display = display.none)
 htf       = input.timeframe("15", "Bağlam için üst zaman dilimi", group = grpP, display = display.none)
 
 grpV = "Görünüm"
 showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, display = display.none)
-showStops  = input.bool(true, "Long / short stop çizgileri", group = grpV, display = display.none)
-showBg     = input.bool(true, "Kovalama uyarısında arka plan", group = grpV, display = display.none)
 showBox    = input.bool(true, "Beklenen hareket kutusu (%80)", group = grpV, display = display.none)
+showBg     = input.bool(true, "Kovalama uyarısında arka plan", group = grpV, display = display.none)
 panelPos   = input.string("Sağ üst", "Panel konumu", options = ["Sağ üst", "Sağ alt", "Sol üst", "Sol alt"], group = grpV, display = display.none)
 
 isLimit = entryMode == "Limit (maker)"
@@ -50,6 +41,8 @@ atr = ta.atr(14)
 
 pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
 pdl = request.security(syminfo.tickerid, "D", low[1], lookahead = barmerge.lookahead_on)
+htfEma   = request.security(syminfo.tickerid, htf, ta.ema(close, 50)[1], lookahead = barmerge.lookahead_on)
+htfClose = request.security(syminfo.tickerid, htf, close[1], lookahead = barmerge.lookahead_on)
 
 // Asya seansi (00-08 UTC) yuksek/dusuk, 08:00'den sonra cizilir
 newDay = timeframe.change("D")
@@ -64,8 +57,6 @@ else if inAsia
     asiaLT := math.min(nz(asiaLT, low), low)
 asiaHi = not inAsia ? asiaHT : na
 asiaLo = not inAsia ? asiaLT : na
-htfEma   = request.security(syminfo.tickerid, htf, ta.ema(close, 50)[1], lookahead = barmerge.lookahead_on)
-htfClose = request.security(syminfo.tickerid, htf, close[1], lookahead = barmerge.lookahead_on)
 
 // Hacim ve likidite (Amihud: fiyat etkisi / dolar hacmi, kendi uzun vadeli seviyesine oranla)
 volMa   = ta.sma(volume, 20)
@@ -100,7 +91,7 @@ if spike
     lastSpike := bar_index
 warnLong    = not na(lastUp) and bar_index - lastUp < flowBars
 warnShort   = not na(lastDn) and bar_index - lastDn < flowBars
-spikeActive = not na(lastSpike) and bar_index - lastSpike < math.max(spikeWait, 1)
+spikeActive = not na(lastSpike) and bar_index - lastSpike < spikeWait
 
 // Fonlama penceresi (UTC)
 hUtc        = hour(time, "UTC")
@@ -108,123 +99,72 @@ minsSince   = (hUtc % fundHours) * 60 + minute(time, "UTC")
 fundPeriod  = fundHours * 60
 nearFunding = fundBlock > 0 and (minsSince < fundBlock or minsSince >= fundPeriod - fundBlock)
 
-// Stoplar ve maliyet
-stopL = stopMode == "ATR katı" ? close - stopAtr * atr : math.min(ta.lowest(low, stopLook) - stopBuf * atr, close - minStop * atr)
-stopS = stopMode == "ATR katı" ? close + stopAtr * atr : math.max(ta.highest(high, stopLook) + stopBuf * atr, close + minStop * atr)
-distL = close - stopL
-distS = stopS - close
-takerX = takerFee + slipSide * liqMult * qhMult
-entryX = isLimit ? makerFee : takerX
-costPx = close * (entryX + takerX) / 100
-costRL = distL > 0 ? costPx / distL : na
-costRS = distS > 0 ? costPx / distS : na
-costMin = math.min(nz(costRL, 9), nz(costRS, 9))
-
-// Beklenen hareket ve gurultu: 1 dk getirinin 30 mumluk EWMA varyansi (22 Binance paritesinde kalibre edildi)
-// N dk'lik |getiri| / (sigma x kok N) dagilimi: %50 dilim 0.61, %80 dilim 1.23 (2025 ve 2026'da tutarli)
+// Beklenen hareket: 1 dk getirinin 30 mumluk EWMA varyansi (22 paritede kalibre; %50 dilim 0.61, %80 dilim 1.23)
 ewVar = ta.ema(nz(r1 * r1), 30)
-sigN  = math.sqrt(ewVar * holdMin)
-em50  = 0.61 * sigN
-em80  = 1.23 * sigN
+sigH  = math.sqrt(ewVar * horizon)
+em50  = 0.61 * sigH
+em80  = 1.23 * sigH
 
-// Stopun N dk icinde gurultuyle vurulma olasiligi (%): mesafe k = log mesafe / sigN; gercek veriden tablo
-hitProb(float k) =>
-    k <= 0 ? 100.0 : k < 0.5 ? 100.0 - 42.5 * k / 0.5 : k < 1.0 ? 57.5 - 28.7 * (k - 0.5) / 0.5 : k < 1.5 ? 28.8 - 15.3 * (k - 1.0) / 0.5 : k < 2.0 ? 13.5 - 7.1 * (k - 1.5) / 0.5 : k < 2.5 ? 6.4 - 3.2 * (k - 2.0) / 0.5 : k < 3.0 ? 3.2 - 1.4 * (k - 2.5) / 0.5 : 1.8 * math.exp(-1.2 * (k - 3.0))
-hitL = sigN > 0 and distL > 0 ? hitProb(math.log(close / stopL) / sigN) : na
-hitS = sigN > 0 and distS > 0 ? hitProb(math.log(stopS / close) / sigN) : na
-
-// Basa bas isabet: kazanc = tpR - (giris + maker TP komisyonu), kayip = 1 + (giris + taker stop komisyonu), R cinsinden
-beRate(float dist) =>
-    cWin = close * (entryX + makerFee) / 100 / dist
-    cLoss = close * (entryX + takerX) / 100 / dist
-    (1 + cLoss) / (tpR - cWin + 1 + cLoss) * 100
-beL = distL > 0 ? beRate(distL) : na
-beS = distS > 0 ? beRate(distS) : na
-randWin = 100 / (1 + tpR)
-
-// Pozisyon buyuklugu: stopta kaybedilecek tutar (fiyat farki + komisyon) = bakiye x risk %
-riskAmt = balance * riskPct / 100
-qtyL = riskAmt / (distL + costPx)
-qtyS = riskAmt / (distS + costPx)
-notL = qtyL * close
-notS = qtyS * close
+// Hareket / maliyet: ufuktaki tipik hareket (%50 dilim), gidis-donus maliyetinin kac kati
+takerX   = takerFee + slipSide * liqMult * qhMult
+entryX   = isLimit ? makerFee : takerX
+costPct  = entryX + takerX
+moveCost = costPct > 0 ? em50 * 100 / costPct : na
 
 // Genel durum
 wrongTf = timeframe.period != "1"
 noVol   = not (volMa > 0)
-redTxt  = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : nearFunding ? "Fonlama saati" : spikeActive ? "Aşırı mum, bekleyin" : costMin > 2 * maxCostR ? "Maliyet çok yüksek" : ""
+redTxt  = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : nearFunding ? "Fonlama saati" : spikeActive ? "Aşırı mum" : moveCost < 1 ? "Hareket maliyetten küçük" : ""
 isRed   = redTxt != ""
-yelTxt  = costMin > maxCostR ? "Maliyet yüksek" : liqMult > 1.5 ? "Likidite ince" : ""
+yelTxt  = moveCost < 2 ? "Hareket maliyete yakın" : liqMult > 1.5 ? "Likidite ince" : warnLong and warnShort ? "İki yönde sert akış" : ""
 isYel   = not isRed and yelTxt != ""
 
 // === Cizimler ===
-plot(showLevels ? vwapV : na, "VWAP", color.new(color.orange, 0), 2)
-plot(showLevels ? vwapU : na, "VWAP +2σ", color.new(color.orange, 70), 1)
-plot(showLevels ? vwapL : na, "VWAP -2σ", color.new(color.orange, 70), 1)
-plot(showLevels ? pdh : na, "Önceki gün yüksek", color.new(color.gray, 20), 1, plot.style_linebr)
-plot(showLevels ? pdl : na, "Önceki gün düşük", color.new(color.gray, 20), 1, plot.style_linebr)
-plot(showLevels ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, plot.style_linebr)
-plot(showLevels ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr)
+plot(showLevels ? vwapV : na, "VWAP", color.new(color.orange, 0), 2, display = display.pane)
+plot(showLevels ? vwapU : na, "VWAP +2σ", color.new(color.orange, 70), 1, display = display.pane)
+plot(showLevels ? vwapL : na, "VWAP -2σ", color.new(color.orange, 70), 1, display = display.pane)
+plot(showLevels ? pdh : na, "Önceki gün yüksek", color.new(color.gray, 20), 1, plot.style_linebr, display = display.pane)
+plot(showLevels ? pdl : na, "Önceki gün düşük", color.new(color.gray, 20), 1, plot.style_linebr, display = display.pane)
+plot(showLevels ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, plot.style_linebr, display = display.pane)
+plot(showLevels ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr, display = display.pane)
 bgcolor(showBg and (warnLong or warnShort) ? color.new(color.orange, 88) : na, title = "Kovalama uyarısı")
 
 var box emBox = na
 if showBox and barstate.islast
     box.delete(emBox)
-    emBox := box.new(bar_index, close * math.exp(em80), bar_index + holdMin, close * math.exp(-em80), border_color = color.new(color.blue, 50), bgcolor = color.new(color.blue, 90), text = "%80 aralık (" + str.tostring(holdMin) + " dk)", text_color = color.new(color.blue, 20), text_size = size.tiny, text_valign = text.align_top)
-
-var line lnL = na
-var line lnS = na
-var label lbL = na
-var label lbS = na
-if showStops and barstate.islast
-    line.delete(lnL)
-    line.delete(lnS)
-    label.delete(lbL)
-    label.delete(lbS)
-    lnL := line.new(bar_index - 3, stopL, bar_index + 8, stopL, color = color.new(color.green, 0), style = line.style_dashed)
-    lnS := line.new(bar_index - 3, stopS, bar_index + 8, stopS, color = color.new(color.red, 0), style = line.style_dashed)
-    lbL := label.new(bar_index + 8, stopL, "Long stop", style = label.style_label_left, color = color.new(color.green, 70), textcolor = color.white, size = size.tiny)
-    lbS := label.new(bar_index + 8, stopS, "Short stop", style = label.style_label_left, color = color.new(color.red, 70), textcolor = color.white, size = size.tiny)
+    emBox := box.new(bar_index, close * math.exp(em80), bar_index + horizon, close * math.exp(-em80), border_color = color.new(color.blue, 50), bgcolor = color.new(color.blue, 90), text = "%80 aralık (" + str.tostring(horizon) + " dk)", text_color = color.new(color.blue, 20), text_size = size.tiny, text_valign = text.align_top)
 
 // === Alarmlar ===
 alertcondition(flowUp, "VSP: Sert alış akışı", "Sert alış akışı: LONG kovalamayın")
 alertcondition(flowDn, "VSP: Sert satış akışı", "Sert satış akışı: SHORT kovalamayın")
-alertcondition(isRed[1] and not isRed, "VSP: Koşullar düzeldi", "VSP: İşlem koşulları uygun hale geldi")
+alertcondition(isRed[1] and not isRed, "VSP: Koşullar düzeldi", "VSP: Piyasa koşulları uygun hale geldi")
 
 // === Panel ===
 pos = panelPos == "Sağ üst" ? position.top_right : panelPos == "Sağ alt" ? position.bottom_right : panelPos == "Sol üst" ? position.top_left : position.bottom_left
-var table panel = table.new(pos, 2, 15, bgcolor = color.new(color.black, 15), border_width = 1)
+var table panel = table.new(pos, 2, 9, bgcolor = color.new(color.black, 15), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
     table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
     table.cell(panel, 1, r, v, text_color = c, text_size = size.small, text_halign = text.align_left)
-
-fmtQty(float q) => q >= 100 ? str.tostring(q, "0") : q >= 1 ? str.tostring(q, "0.00") : str.tostring(q, "0.0000")
 
 if barstate.islast
     cGood = color.lime
     cBad = color.red
     cWarn = color.yellow
     cMid = color.gray
-    stTxt = isRed ? "İŞLEM AÇMAYIN: " + redTxt : isYel ? "DİKKAT: " + yelTxt : "Koşullar uygun"
+    stTxt = isRed ? "UYGUN DEĞİL: " + redTxt : isYel ? "DİKKAT: " + yelTxt : "Koşullar uygun"
     stCol = isRed ? cBad : isYel ? cWarn : cGood
     table.cell(panel, 0, 0, "DURUM", text_color = color.white, text_size = size.normal, text_halign = text.align_left)
     table.cell(panel, 1, 0, stTxt, text_color = color.black, bgcolor = stCol, text_size = size.normal, text_halign = text.align_left)
-    cell(1, "Maliyet / risk (L / S)", str.tostring(nz(costRL), "0.00") + "R / " + str.tostring(nz(costRS), "0.00") + "R", costMin <= maxCostR ? cGood : costMin <= 2 * maxCostR ? cWarn : cBad)
-    cell(2, "Fonlama", nearFunding ? "Şimdi, bekleyin" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? cBad : cMid)
-    cell(3, "Oynaklık (1 dk ATR)", "%" + str.tostring(atr / close * 100, "0.000") + (spikeActive ? " | aşırı mum, bekleyin" : " | normal"), spikeActive ? cBad : cMid)
-    cell(4, "Likidite (kayma çarpanı)", (liqMult > 1.5 ? "İnce" : "Normal") + " (x" + str.tostring(liqMult * qhMult, "0.0") + ")", liqMult > 1.5 ? cWarn : cMid)
-    flowTxt = warnLong and warnShort ? "İki yönde sert akış, bekleyin" : warnLong ? "Sert alış: LONG kovalamayın" : warnShort ? "Sert satış: SHORT kovalamayın" : "Normal"
-    cell(5, "Son 15 dk akış (delta " + str.tostring(imb15 * 100, "0") + "%, z " + str.tostring(z15, "0.0") + ")", flowTxt, warnLong or warnShort ? cWarn : cMid)
+    cell(1, "Hareket / maliyet (" + str.tostring(horizon) + " dk)", str.tostring(nz(moveCost), "0.0") + " kat (hareket %" + str.tostring(em50 * 100, "0.00") + ", maliyet %" + str.tostring(costPct, "0.00") + ")", nz(moveCost) >= 2 ? cGood : nz(moveCost) >= 1 ? cWarn : cBad)
+    cell(2, "Beklenen hareket (" + str.tostring(horizon) + " dk)", "%50: ±%" + str.tostring(em50 * 100, "0.00") + " | %80: ±%" + str.tostring(em80 * 100, "0.00"), cMid)
+    flowTxt = warnLong and warnShort ? "İki yönde sert akış" : warnLong ? "Sert alış: LONG kovalamayın" : warnShort ? "Sert satış: SHORT kovalamayın" : "Normal"
+    cell(3, "Son 15 dk akış (delta " + str.tostring(imb15 * 100, "0") + "%, z " + str.tostring(z15, "0.0") + ")", flowTxt, warnLong or warnShort ? cWarn : cMid)
+    cell(4, "Fonlama", nearFunding ? "Şimdi" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? cBad : cMid)
+    cell(5, "Oynaklık (1 dk ATR)", "%" + str.tostring(atr / close * 100, "0.000") + (spikeActive ? " | aşırı mum" : " | normal"), spikeActive ? cBad : cMid)
+    cell(6, "Likidite (kayma çarpanı)", (liqMult > 1.5 ? "İnce" : "Normal") + " (x" + str.tostring(liqMult * qhMult, "0.0") + ")", liqMult > 1.5 ? cWarn : cMid)
     ctxTxt = (htfClose > htfEma ? "Üst ZD yukarı" : "Üst ZD aşağı") + ", fiyat VWAP " + (close > vwapV ? "üstünde" : "altında")
-    cell(6, "Bağlam (bilgi, sinyal değil)", ctxTxt, cMid)
-    cell(7, "LONG: stop / miktar", str.tostring(stopL, format.mintick) + " / " + fmtQty(qtyL), color.white)
-    cell(8, "LONG: büyüklük / kaldıraç", str.tostring(notL, "0") + " USDT / en az " + str.tostring(math.ceil(notL / balance)) + "x", color.white)
-    cell(9, "SHORT: stop / miktar", str.tostring(stopS, format.mintick) + " / " + fmtQty(qtyS), color.white)
-    cell(10, "SHORT: büyüklük / kaldıraç", str.tostring(notS, "0") + " USDT / en az " + str.tostring(math.ceil(notS / balance)) + "x", color.white)
-    cell(11, "Stopta kayıp (komisyon dahil)", str.tostring(riskAmt, "0.00") + " USDT (%" + str.tostring(riskPct, "0.0#") + ")", cMid)
-    cell(12, "Beklenen hareket (" + str.tostring(holdMin) + " dk)", "%50: ±%" + str.tostring(em50 * 100, "0.00") + " | %80: ±%" + str.tostring(em80 * 100, "0.00"), cMid)
-    hitMax = math.max(nz(hitL), nz(hitS))
-    cell(13, "Stop gürültüyle vurulur mu (" + str.tostring(holdMin) + " dk)", "L %" + str.tostring(nz(hitL), "0") + " | S %" + str.tostring(nz(hitS), "0"), hitMax >= 50 ? cBad : hitMax >= 25 ? cWarn : cGood)
-    cell(14, "Başa baş isabet (hedef " + str.tostring(tpR, "0.0#") + "R)", "L %" + str.tostring(nz(beL), "0") + " | S %" + str.tostring(nz(beS), "0") + " (rastgele ≈ %" + str.tostring(randWin, "0") + ")", math.min(nz(beL, 100), nz(beS, 100)) - randWin <= 3 ? cGood : cWarn)
+    cell(7, "Bağlam (bilgi, sinyal değil)", ctxTxt, cMid)
+    warnTxt = wrongTf ? "1 dk grafiğe geçin" : noVol ? "Hacim verisi yok" : "Yok"
+    cell(8, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : cWarn)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir

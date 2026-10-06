@@ -10,7 +10,7 @@ TradingView için 1 dakikalık kripto vadeli işlem göstergesi (Pine Script v6)
 - Her zaman Türkçe yanıt ver ve Türkçe imla kurallarına uy.
 - Yanıtlar kısa ve öz olsun.
 - Gösterge geliştirilirken her seferinde internette derin araştırma yap ve yeni bilgileri göstergeye kat.
-- **Kullanıcı strateji değil gösterge istiyor. Nereden alıp satacağına kendisi karar verir. Göstergeye AL/SAT sinyali ekleme; karar için bilgi ver.**
+- **Kullanıcı strateji değil gösterge istiyor. Nereden alıp satacağına ve stopunu nereye koyacağına kendisi karar verir. Göstergeye AL/SAT sinyali, stop çizgisi, stop önerisi ya da pozisyon büyüklüğü hesabı ekleme; yalnızca piyasayı anlatan bilgi ver.**
 - Kullanıcıya seçenek yığını sunma. En doğru çözümü seç, uygula ve kafa karıştırmayacak kadar işlevsel tut.
 - Her sohbetin sonunda, Tanım veya Talimat kartında değişiklik olduysa `KARTLAR.md` dosyasını güncelle ve kartların güncel hâlini yanıtta ver.
 - Dürüst ol: Net getiri, komisyon ve kayma etkisi ile sonuçların güvenilirliği hakkında abartma.
