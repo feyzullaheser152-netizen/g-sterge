@@ -1,10 +1,10 @@
 //@version=6
-// Vadeli Scalp Pusulası (VSP) — v1.0.1
-// 1 dakikalık kripto vadeli işlemler için: trend + VWAP + hacim + güç + komisyon filtresi.
-// Sinyaller yalnızca mum kapanışında oluşur, yeniden çizim (repaint) yapmaz.
+// Vadeli Scalp Pusulasi (VSP) - v1.0.2
+// 1 dakikalik kripto vadeli islemler icin: trend + VWAP + hacim + guc + komisyon filtresi.
+// Sinyaller yalnizca mum kapanisinda olusur, yeniden cizim (repaint) yapmaz.
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
 
-// ───────── Girdiler ─────────
+// === Girdiler ===
 grpT = "Trend"
 emaFastLen = input.int(9, "Hızlı EMA", minval = 1, group = grpT)
 emaSlowLen = input.int(21, "Yavaş EMA", minval = 1, group = grpT)
@@ -23,7 +23,7 @@ cooldown = input.int(5, "Sinyaller arası en az mum", minval = 0, group = grpF)
 
 grpR = "Risk"
 atrLen   = input.int(14, "ATR uzunluğu", minval = 1, group = grpR)
-slMult   = input.float(1.5, "Stop (ATR ×)", step = 0.1, group = grpR)
+slMult   = input.float(1.5, "Stop (ATR x)", step = 0.1, group = grpR)
 tp1R     = input.float(1.0, "TP1 (R)", step = 0.1, group = grpR)
 tp2R     = input.float(2.0, "TP2 (R)", step = 0.1, group = grpR)
 feePct   = input.float(0.10, "Gidiş-dönüş komisyon %", step = 0.01, group = grpR)
@@ -34,17 +34,25 @@ showBands  = input.bool(true, "VWAP bantları", group = grpV)
 showLevels = input.bool(true, "Giriş/Stop/TP seviyeleri", group = grpV)
 showPanel  = input.bool(true, "Panel", group = grpV)
 
-// ───────── Hesaplar ─────────
+// === Hesaplar ===
 emaF = ta.ema(close, emaFastLen)
 emaS = ta.ema(close, emaSlowLen)
+[vwapV, vwapU, vwapL] = ta.vwap(hlc3, timeframe.change("D"), 2.0)
 
-// Üst zaman dilimi: kapanmış muma göre, repaint yok
+// Temel cizimler (en basta)
+pF = plot(emaF, "Hızlı EMA", color.new(color.teal, 0), 1)
+pS = plot(emaS, "Yavaş EMA", color.new(color.maroon, 0), 1)
+fill(pF, pS, emaF > emaS ? color.new(color.teal, 85) : color.new(color.maroon, 85), title = "EMA bulutu")
+plot(vwapV, "VWAP", color.new(color.orange, 0), 2)
+plot(showBands ? vwapU : na, "VWAP üst", color.new(color.orange, 70), 1)
+plot(showBands ? vwapL : na, "VWAP alt", color.new(color.orange, 70), 1)
+
+// Ust zaman dilimi: kapanmis muma gore, repaint yok
 htfEma   = request.security(syminfo.tickerid, htf, ta.ema(close, htfLen)[1], lookahead = barmerge.lookahead_on)
 htfClose = request.security(syminfo.tickerid, htf, close[1], lookahead = barmerge.lookahead_on)
 htfUp = htfClose > htfEma
 htfDn = htfClose < htfEma
 
-[vwapV, vwapU, vwapL] = ta.vwap(hlc3, timeframe.change("D"), 2.0)
 [diP, diM, adx] = ta.dmi(adxLen, adxLen)
 rsi   = ta.rsi(close, rsiLen)
 atr   = ta.atr(atrLen)
@@ -60,73 +68,65 @@ dnTrend = emaF < emaS and close < vwapV and htfDn
 strong  = adx >= adxMin
 volOk   = rvol >= rvolMin
 
-// Tetik: trend yönünde hızlı EMA'ya geri çekilip dönüş
+// Tetik: trend yonunde hizli EMA'ya geri cekilip donus
 longTrig  = ta.crossover(close, emaF) or (low <= emaF and close > emaF and close > open)
 shortTrig = ta.crossunder(close, emaF) or (high >= emaF and close < emaF and close < open)
 
 longCond  = upTrend and longTrig and strong and volOk and feeOk and rsi < rsiMaxL and close < vwapU
 shortCond = dnTrend and shortTrig and strong and volOk and feeOk and rsi > rsiMinS and close > vwapL
 
-// ───────── Pozisyon takibi ─────────
-var int   dir      = 0
-var float entry    = na
-var float sl       = na
-var float tp1      = na
-var float tp2      = na
-var bool  tp1Hit   = false
-var int   entryBar = na
-var int   lastSig  = na
-var string status  = "Bekle"
+// === Pozisyon takibi ===
+var int dir = 0
+var float entry = na
+var float sl = na
+var float tp1 = na
+var float tp2 = na
+var bool tp1Hit = false
+var int entryBar = na
+var int lastSig = na
+var string status = "Bekle"
 
-// Açık pozisyonun sonucu (giriş mumundan sonra)
+// Acik pozisyonun sonucu (giris mumundan sonra)
 if dir != 0 and bar_index > entryBar
     if dir == 1
         if low <= sl
             status := tp1Hit ? "Başa baş çıkış" : "Stop"
             dir := 0
         else if high >= tp2
-            status := "TP2 ✓"
+            status := "TP2 alındı"
             dir := 0
         else if not tp1Hit and high >= tp1
             tp1Hit := true
             sl := entry
-            status := "TP1 ✓ (stop girişe)"
+            status := "TP1 alındı, stop girişte"
     else
         if high >= sl
             status := tp1Hit ? "Başa baş çıkış" : "Stop"
             dir := 0
         else if low <= tp2
-            status := "TP2 ✓"
+            status := "TP2 alındı"
             dir := 0
         else if not tp1Hit and low <= tp1
             tp1Hit := true
             sl := entry
-            status := "TP1 ✓ (stop girişe)"
+            status := "TP1 alındı, stop girişte"
 
 canSig   = na(lastSig) or bar_index - lastSig > cooldown
 longSig  = barstate.isconfirmed and canSig and longCond and dir != 1
 shortSig = barstate.isconfirmed and canSig and shortCond and dir != -1
 
 if longSig or shortSig
-    dir      := longSig ? 1 : -1
-    entry    := close
-    sl       := close - dir * slDist
-    tp1      := close + dir * slDist * tp1R
-    tp2      := close + dir * slDist * tp2R
-    tp1Hit   := false
+    dir := longSig ? 1 : -1
+    entry := close
+    sl := close - dir * slDist
+    tp1 := close + dir * slDist * tp1R
+    tp2 := close + dir * slDist * tp2R
+    tp1Hit := false
     entryBar := bar_index
-    lastSig  := bar_index
-    status   := longSig ? "LONG açık" : "SHORT açık"
+    lastSig := bar_index
+    status := longSig ? "LONG açık" : "SHORT açık"
 
-// ───────── Çizimler ─────────
-pF = plot(emaF, "Hızlı EMA", color.new(color.teal, 0), 1)
-pS = plot(emaS, "Yavaş EMA", color.new(color.maroon, 0), 1)
-fill(pF, pS, emaF > emaS ? color.new(color.teal, 85) : color.new(color.maroon, 85), title = "EMA bulutu")
-
-plot(vwapV, "VWAP", color.new(color.orange, 0), 2)
-plot(showBands ? vwapU : na, "VWAP üst", color.new(color.orange, 70), 1)
-plot(showBands ? vwapL : na, "VWAP alt", color.new(color.orange, 70), 1)
-
+// === Seviyeler ve sinyaller ===
 act = showLevels and dir != 0
 plot(act ? entry : na, "Giriş", color.new(color.gray, 0), 1, plot.style_linebr)
 plot(act ? sl : na, "Stop", color.new(color.red, 0), 2, plot.style_linebr)
@@ -136,7 +136,7 @@ plot(act ? tp2 : na, "TP2", color.new(color.lime, 0), 2, plot.style_linebr)
 plotshape(longSig, "AL", shape.labelup, location.belowbar, color.new(color.green, 0), text = "AL", textcolor = color.white, size = size.small)
 plotshape(shortSig, "SAT", shape.labeldown, location.abovebar, color.new(color.red, 0), text = "SAT", textcolor = color.white, size = size.small)
 
-// ───────── Alarmlar ─────────
+// === Alarmlar ===
 alertcondition(longSig, "VSP AL", "VSP: AL sinyali")
 alertcondition(shortSig, "VSP SAT", "VSP: SAT sinyali")
 if longSig or shortSig
@@ -144,7 +144,7 @@ if longSig or shortSig
     msg = yon + syminfo.ticker + " | Giriş " + str.tostring(entry, format.mintick) + " | Stop " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick)
     alert(msg, alert.freq_once_per_bar_close)
 
-// ───────── Panel ─────────
+// === Panel ===
 var table panel = table.new(position.top_right, 2, 8, bgcolor = color.new(color.black, 20), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
@@ -153,8 +153,8 @@ cell(int r, string k, string v, color c) =>
 
 if showPanel and barstate.islast
     cGood = color.lime
-    cBad  = color.red
-    cMid  = color.gray
+    cBad = color.red
+    cMid = color.gray
     cell(0, "Üst ZD (" + htf + ")", htfUp ? "Yukarı" : htfDn ? "Aşağı" : "Yatay", htfUp ? cGood : htfDn ? cBad : cMid)
     cell(1, "1 dk trend", upTrend ? "Yukarı" : dnTrend ? "Aşağı" : "Karışık", upTrend ? cGood : dnTrend ? cBad : cMid)
     cell(2, "VWAP", close > vwapV ? "Üstünde" : "Altında", close > vwapV ? cGood : cBad)
@@ -163,3 +163,4 @@ if showPanel and barstate.islast
     cell(5, "TP2 / komisyon", str.tostring(tp2Pct / feePct, "#.0") + "x", feeOk ? cGood : cBad)
     cell(6, "Durum", status, dir == 1 ? cGood : dir == -1 ? cBad : color.white)
     cell(7, "Uyarı", timeframe.period == "1" ? (volMa > 0 ? "Yok" : "Hacim verisi yok") : "1 dk grafiğe geçin", timeframe.period == "1" and volMa > 0 ? cMid : color.yellow)
+// VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir
