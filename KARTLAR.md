@@ -1,118 +1,72 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v4.0.1)
+## Tanım Kartı (v5.0)
 
-**Amaç:** 1 dakikalık kripto vadeli grafikte yalnızca komisyon ve kaymadan sonra da kâr bırakabilecek az sayıda işlemi göstermek ve sonuçları dürüstçe ölçmek.
+**Ne yapar:** 1 dakikalık kripto vadeli grafikte işlem kararını **siz verirsiniz**. Gösterge AL/SAT sinyali vermez. Karar anında size şu dört soruda bilgi verir:
+1. **Bu işlem komisyonu çıkarabilir mi?** Maliyetin riskinize oranını hesaplar.
+2. **Piyasa şu an uygun mu?** Fonlama saatini, aşırı mumu ve ince likiditeyi gösterir.
+3. **Hangi yön kovalanmamalı?** Sert akış uyarısı verir.
+4. **Kaç birim açmalıyım, stop nerede?** Pozisyon büyüklüğünü ve stop seviyesini hesaplar.
 
-**v3.0 testinden çıkan ders (5 parite, 296 işlem):**
-- Toplam sonuç −77R, işlem başına −0,26R. Bu kayıp kabaca işlem maliyetine eşit; yani sinyallerin maliyet öncesi kenarı sıfıra yakındı.
-- Skor, kazanan ve kaybeden işlemleri ayırt etmiyordu: 80+ skorlu işlemler 70'in altındakilerden daha iyi değildi.
-- Kayıpların çoğu, NEAR'da yuvarlak sayılar ve kısa salınım seviyelerindeki aşırı sık süpürme sinyallerinden geldi.
+**Panel satırları:**
 
-v4.0 bu üç soruna göre yeniden kuruldu.
+| Satır | Ne gösterir |
+|---|---|
+| DURUM | Yeşil: "Koşullar uygun". Sarı: "DİKKAT: maliyet yüksek / likidite ince". Kırmızı: "İŞLEM AÇMAYIN" ve sebebi (fonlama saati, aşırı mum, çok yüksek maliyet, yanlış zaman dilimi, hacim verisi yok). |
+| Maliyet / risk (L / S) | Long ve short stop mesafesinde komisyon ve kaymanın riskin kaçta kaçı olduğu. Ayarlardaki sınırın (0,20R) altı yeşil, iki katına kadar sarı, üstü kırmızı. |
+| Fonlama | Bir sonraki fonlamaya kalan süre. ±3 dakika içinde "bekleyin". |
+| Oynaklık (1 dk ATR) | 1 dakikalık ortalama hareket (%). Mum boyu 4 ATR'yi aşarsa 5 mum "aşırı mum, bekleyin". |
+| Likidite (kayma çarpanı) | Amihud ölçüsüne göre piyasa ince mi; kayma kaç kat artmış. |
+| Son 15 dk akış | Tahmini delta (%) ve hareketin z-skoru. Sert alış akışıyla yükselişten sonra 15 mum "LONG kovalamayın", sert satış akışıyla düşüşten sonra "SHORT kovalamayın". |
+| Bağlam (bilgi, sinyal değil) | 15 dakikalık trend yönü ve fiyatın VWAP'a göre konumu. |
+| LONG / SHORT: stop / miktar | Stop fiyatı ve açılacak miktar (coin adedi). |
+| LONG / SHORT: büyüklük / kaldıraç | Pozisyon büyüklüğü (USDT) ve gereken en düşük kaldıraç. |
+| Stopta kayıp | Stop olursa komisyon dahil kaybedilecek tutar. |
 
-**Emir ve maliyet modeli:**
-- **Giriş:** Varsayılan olarak **limit (maker)** emir.
-  - Sinyal mumunun kapanış fiyatına konur ve 3 mum geçerli kalır.
-  - Dolmuş sayılması için fiyatın limit seviyesini **aşması** gerekir; yalnızca dokunması yetmez. Bu ihtiyatlı bir varsayımdır.
-  - Dolum mumunda stop görülürse işlem stop sayılır.
-- **Çıkışlar:**
-  - TP çıkışları limit (maker) kabul edilir.
-  - Stop, zaman stopu ve ters sinyal çıkışları taker komisyonu ve kayma ile hesaplanır.
-- **Kayma:**
-  - Amihud likiditesine göre 0,5x ile 3x arasında ölçeklenir.
-  - Çeyrek saat açılışlarında 1,5 katına çıkar.
-- **Maliyet / risk sınırı:** En kötü durum maliyeti (giriş + stop çıkışı) riskin %20'sini aşarsa sinyal verilmez.
+**Grafikte:**
+- VWAP ve ±2σ bantları.
+- Önceki gün yüksek/düşük (gri).
+- Asya seansı yüksek/düşük (mor).
+- Long ve short stop çizgileri (kesikli).
+- Kovalama uyarısı sırasında turuncu arka plan.
 
-**Kurulum 1 — Trend devamı (yeşil/kırmızı etiket):**
-- **Sert koşullar (hepsi zorunlu):**
-  - EMA 9/21 trendi ve fiyatın VWAP'ın doğru tarafında olması.
-  - Üst ZD (15 dk) aynı yönde.
-  - BTC aynı yönde.
-  - ER ≥ 0,30.
-  - Varyans oranı > 1 (momentum rejimi).
-  - Hareket kovalanmıyor olmalı (15 mumluk z < 2).
-  - RSI aşırı bölgede olmamalı ve fiyat VWAP ±2σ bandının içinde olmalı.
-  - Aşırı mum olmamalı.
-- **Tetik:** Hızlı EMA'ya geri çekilip trend yönünde kapanış.
-- **Skor:** Koşulları geçen sinyal 50 puanla başlar.
-  - Eklenenler: ADX +10, BVC delta +15, OI artışı +10, göreli hacim +10, likit saat +5.
-  - Kalabalık pozisyon −10.
+**Pozisyon hesabı:**
+- Miktar = (bakiye × risk %) ÷ (giriş ile stop arası fark + giriş ve çıkış komisyonu).
+- Böylece stop olursa komisyon dahil tam olarak ayarladığınız tutarı kaybedersiniz.
 
-**Kurulum 2 — Likidite süpürme + yapı kırılımı (turkuaz/turuncu etiket):**
-- **Seviyeler (varsayılan):** Önceki gün yüksek/düşük (25), Asya seansı yüksek/düşük (20), son 240 mumun (4 saat) ucu (15).
-- **Varsayılan olarak kapalı:** Yuvarlak sayılar ve kısa salınım noktaları. Bu seviyeler 1 dakikalıkta gürültü üretti.
-- **Süpürme mumu:**
-  - Seviye son 30 mumda dokunulmamış (taze) olmalıdır.
-  - İğne seviyenin 0,1 ile 1,5 ATR ötesine gitmelidir.
-  - Mum seviyenin içine geri kapanmalıdır.
-  - Akış toksik olmamalı ve güçlü karşı trend olmamalıdır.
-- **Yapı kırılımı onayı:** Süpürmeden sonraki 5 mum içinde süpürme mumunun tepesinin (short'ta dibinin) üzerinde kapanış gerekir. Stop, süpürme iğnesinin ötesine konur.
-- **Skor (130 üzerinden, 100'e ölçeklenir):**
-  - Seviye: 25 / 20 / 15
-  - Göreli hacim: 20
-  - Güçlü iğne reddi: 15
-  - OI düşüşü: 15
-  - BTC karşı yönde değil: 10
-  - Fiyat VWAP'ın karşı tarafında: 15
-  - VR < 1 (ters dönüş rejimi): 10
-  - Seviyeye saldırgan akışla gelinmiş: 10
-  - Kalabalık pozisyon (prim z-skoru ≥ 2) kalabalık tarafa karşı: 10
-
-**Genel filtreler:**
-- Sinyaller yalnızca mum kapanışında oluşur.
-- Fonlama saatine ±3 dakika kala sinyal verilmez.
-- Sinyaller arasında en az 5 mum olmalıdır.
-- En düşük skor 60'tır.
-
-**Risk yönetimi:**
-- **Stop:**
-  - Trendde son 5 mumun dibi/tepesi, süpürmede iğnenin ucu (0,2 ATR tamponla).
-  - Stop mesafesi 0,6 ile 3 ATR arasında tutulur.
-- **TP1 = 1R:** Pozisyonun %50'si kapatılır, stop girişe çekilir.
-- **TP2 = 2R.**
-- **Zaman stopu:** TP1'e 20 mumda ulaşılmazsa pozisyon kapatılır.
-
-**Paneller:**
-- **Piyasa paneli (sağ üst):** Rejim, Eğilim (VR), Üst ZD, BTC, Akış (delta / VPIN), OI, Prim, Hacim / kayma, Maliyet / risk, Fonlama, Süpürme takibi, Durum, Uyarı.
-- **Performans paneli (sağ alt, komisyon ve kayma dahil):** İşlem / isabet, Net R / PF, Ortalama R, En büyük düşüş, Güven (t), Önerilen risk (yarım Kelly), kurulum bazında sonuçlar, dolmayan limit emir sayısı.
-- **Teşhis paneli (sol alt):**
-  - 8 bileşenin her biri için, bileşen **varken** ve **yokken** işlem başına ortalama net R'yi gösterir.
-  - Yeşil renk, bileşenin sonucu iyileştirdiğini gösterir.
-  - Hangi filtrenin gerçekten işe yaradığını veriyle görmek için kullanılır.
-
-**Grafikte:** EMA bulutu, VWAP ve ±2σ bantları, önceki gün (gri), Asya (mor) ve 4 saatlik uç (mavi) seviyeleri, açık pozisyonun çizgileri, bekleyen limit emir (sarı noktalar).
+**Kovalama uyarısının kanıtı:** 22 Binance vadeli paritesi, 21 ay:
+- Saldırgan akışla gelen sert 15 dakikalık hareketten sonra fiyat 5–15 dakika içinde ortalama 1,4–4,7 baz puan geri dönüyor. Paritelerin %77–95'inde, iki yılda da tutuyor.
+- O yönde yeni giren biri ortalamada bu kadar dezavantajla başlar.
 
 ## Talimat Kartı
 
 1. Kodu almak için GitHub'da dosyanın **Raw** sayfasını açın. **Ctrl+A** ve **Ctrl+C** ile kopyalayın. Pine Düzenleyici'de **Ctrl+A** ve **Ctrl+V** ile yapıştırın. Son satırda `// VSP SONU` yazısını görmelisiniz.
 2. **Kaydet**'e, ardından **Grafiğe ekle**'ye basın. Gösterge alt bölmede açılırsa sağ tıklayıp **Taşı (Move to) → Yukarıdaki mevcut bölme (Existing pane above)** seçeneğini kullanın.
-3. Grafiği **1 dakika** yapın ve **vadeli (.P)** parite açın.
-4. Ayarlar → **Emir ve maliyet** bölümünde borsanızın maker ve taker komisyonlarını girin. Varsayılanlar maker %0,02, taker %0,05 ve kayma %0,01'dir.
-5. **Sinyal gelince:**
-   - Etiketteki fiyata hemen **limit emir** koyun.
-   - Emir 3 mum içinde dolmazsa iptal edin.
-   - Dolunca stop emrini ve TP1/TP2 limit emirlerini girin.
-   - TP1 dolunca stopu giriş seviyesine çekin.
-6. Etiketin üzerine gelince emir fiyatı, stop, TP ve maliyet bilgileri görünür.
-7. Alarm için Koşul: VSP → **"Any alert() function call"** seçeneğini seçin. Mesajda emir tipi ve seviyeler hazır gelir.
-8. Gerçek parayla işlem yapmadan önce **Performans** panelindeki "Güven" satırına bakın. "Anlamlı kenar" görmeden gerçek para kullanmayın.
-9. Geliştirme için 3–5 paritede üç panelin (özellikle **Teşhis**) ekran görüntüsünü gönderin.
+3. Ayarlar → **Hesap ve risk** bölümünde şunları girin:
+   - Hesap bakiyeniz (USDT) ve işlem başına risk yüzdeniz (öneri: %0,5 – %1).
+   - Stop yöntemi: Son mumların dibi/tepesi ya da ATR katı.
+4. Ayarlar → **Emir ve maliyet** bölümünde şunları girin:
+   - Borsanızın maker ve taker komisyonları.
+   - Girişte limit mi piyasa emri mi kullandığınız.
+5. Ayarlar → **Piyasa koşulu** bölümünde paritenizin fonlama aralığını seçin (8, 4 ya da 1 saat).
+6. **İşlem açmadan önce:**
+   - DURUM kırmızıysa açmayın.
+   - Sarıysa sebebini okuyun.
+   - "Son 15 dk akış" satırı bir yönü kovalamamanızı söylüyorsa o yönde girmeyin.
+7. Girişe karar verdiğinizde paneldeki **miktarı** ve **stop fiyatını** kullanın. Kendi stop seviyenizi kullanacaksanız, ATR katını o mesafeye göre ayarlayın.
+8. Alarmlar: Koşul VSP → "Sert alış akışı", "Sert satış akışı" ya da "Koşullar düzeldi".
 
-## Test Kanıtı (21 ay BTC 1 dakikalık veri)
+## Test Kanıtı
 
-- Ayrıntılar: `arastirma/BULGULAR.md`.
-- **v4.0 mantığı:** 917 bin mum ve 2.746 işlem üzerinde maliyet öncesi kenar yok. Trend kurulumunun brüt kenarı anlamlı biçimde negatif (−0,19R, t −30).
-- **Klasik kalıplar:** 15 dk dönüş, VWAP sapması, süpürme, kırılım, sıkışma, dev mum ve saat etkileri test edildi. Hiçbiri maliyeti (8–13 baz puan) aşan ve iki yılda tutarlı bir kenar göstermedi.
-- **Uygulamadaki anlamı:** Göstergenin AL/SAT sinyalleri şu an **kanıtlanmış bir kenara sahip değildir**. Gerçek parayla işlem için kullanılmamalıdır.
-- **Binance vadeli testi (22 parite, 21 ay, gerçek taker delta):**
-  - Tutarlı tek etki, saldırgan akış sonrası 5–15 dakikalık dönüş (1–3 baz puan).
-  - Limit ya da piyasa emri fark etmeksizin, gerçekçi maliyetlerle net sonuç her senaryoda negatif (−3,5 ile −12 baz puan).
+Ayrıntılar: `arastirma/BULGULAR.md`.
+- **BTC spot verisi:** 21 ay, 917 bin mum.
+- **Binance vadeli verisi:** 22 parite, 21 ay, yaklaşık 20 milyon mum, gerçek taker delta, fonlama, OI ve long/short oranı.
+- **Bulgu:** Test edilen hiçbir 1 dakikalık yön kalıbı, en düşük komisyonla (maker %0 / taker %0,02) bile iki yılda tutarlı net kâr üretmedi.
+- **Tutarlı tek etki:** Akış sonrası kısa dönüş (1–3 baz puan). Gösterge bu etkiyi yalnızca "kovalamayın" uyarısı olarak kullanır.
+- AL/SAT sinyalleri bu yüzden kaldırıldı. Kararı siz verirsiniz; gösterge kaçınılabilir maliyetleri ve hataları azaltmak için bilgi verir.
 
 ## Dürüst Not
 
 - Hiçbir gösterge kâr garantisi vermez.
-- v3.0 (296 işlem) ve v4.0 (19 işlem) ekran görüntüleri ile 21 aylık BTC testi aynı sonucu veriyor: Sinyallerin **kenarı yok**.
-- Limit emir simülasyonu TradingView mumlarıyla yapılan bir yaklaşımdır. Gerçekte emir kuyruğundaki sıranız dolumu etkiler.
-- Araştırmalar, limit emirlerin en çok fiyat aleyhe giderken dolduğunu söylüyor. Simülasyon bunu kısmen yansıtır.
-- Sinyal sayısı v3.0'a göre belirgin şekilde azalacak. Bu bilinçli bir tercih: Az sayıda işlem, daha düşük maliyet yükü demek.
+- Testlere göre 1 dakikalık işlemde net sonucu en çok komisyon, kayma ve pozisyon büyüklüğü belirler. Bu panel tam olarak bu üçünü yönetmenize yardım eder.
+- Tahmini delta, gerçek taker deltasıyla yaklaşık 0,67 korelasyonludur; bire bir aynı değildir.

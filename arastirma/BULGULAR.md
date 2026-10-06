@@ -91,3 +91,28 @@ Limit emirler, kenarın bulunduğu anlarda değil, fiyat aleyhe giderken doluyor
 - Akademik bulguyla birebir uyumludur ([arXiv 2608.21888](https://arxiv.org/abs/2608.21888)). Bu etkiyi kâra çevirebilenler maker iadesi alan piyasa yapıcılardır.
 - **Uygulamadaki anlamı:** Perakende komisyonlarıyla 1 dakikalık grafikte göstergeye dayalı yön tahmini, kanıta göre net zarar üretir.
 
+
+## 4. Ek testler (1 dakikalık işlemde kenar arayışının son adımları)
+
+**Akış dönüşünü yakalama ızgarası (`revgrid.py`):**
+- Toplam 144 ayar denendi: limit mesafesi 0/0,5/1 ATR, TP, SL, süre ve eşikler.
+- Üç maliyet senaryosu kullanıldı:
+
+| Senaryo | 2025'te pozitif ayar | 2026'da pozitif ayar | En iyi 8 ayarın 2026 ortalaması |
+|---|---|---|---|
+| Binance VIP 0 (maker %0,02 / taker %0,05) | %0 | %0 | −5,5 bp |
+| Hyperliquid (maker %0,015 / taker %0,045) | %0 | %0 | −4,5 bp |
+| Düşük ücret (maker %0 / taker %0,02) | %1 | %1 | −0,9 bp |
+
+**Fonlama saati etkisi (`funding.py`):** İşaretler yıllar arasında değişiyor. Etki, o yılın genel piyasa yönünden ayırt edilemiyor; kenar yok.
+
+**OI ve long/short oranı (`oi_test.py`, `oi_base.py`; 10 parite, 5 dakikalık metrikler):**
+- OI sıçraması ya da düşüşü: Tutarsız.
+- Kalabalık short (L/S oranı en düşük %5'lik dilim) → long: Piyasa yönünden arındırıldıktan sonra 2025'te +4 ile +10 bp, 2026'da 30–60 dakikalık ufukta yalnızca +0,6 ile +0,9 bp. 1 dakikalık işlem için yetersiz; ayrıca TradingView'de bu veri yok.
+
+**BVC tahmini deltası (`bvc_check.py`):**
+- Gerçek taker deltasıyla korelasyon 0,67.
+- BVC ile tanımlanan "sert akış" sonrası dönüş: 2025'te +3,8 / +4,7 bp, 2026'da +1,4 / +1,8 bp (5 / 15 dk).
+- Bu sonuç, göstergedeki "kovalamayın" uyarısının dayanağıdır.
+
+**Karar:** Göstergeden AL/SAT sinyalleri kaldırıldı (v5.0). Kullanıcı kararı kendisi verir; gösterge maliyet, koşul, akış ve pozisyon büyüklüğü bilgisi sunar.
