@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v5.4)
+## Tanım Kartı (v5.5)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **piyasayı anlatır**.
@@ -20,20 +20,17 @@
 | DURUM | **Yeşil:** "Koşullar uygun". **Sarı:** "DİKKAT", sebebiyle birlikte (zamanlanmış oynaklık anı, hareket maliyete yakın, likidite ince, iki yönde sert akış). **Kırmızı:** "UYGUN DEĞİL", sebebiyle birlikte (FOMC açıklaması, fonlama saati, aşırı mum, hareket maliyetten küçük, yanlış zaman dilimi, hacim verisi yok). |
 | Hareket / maliyet | Seçilen ufukta tipik hareketin (%50 dilim), gidiş-dönüş komisyon ve kaymanın kaç katı olduğu. 2 kat ve üstü yeşil, 1–2 kat sarı, 1'in altı kırmızı. |
 | Beklenen hareket | Seçilen ufukta fiyatın %50 ve %80 olasılıkla kalacağı aralık (±%). |
-| Son 15 dk akış | Tahmini delta (%) ve hareketin z-skoru. Sert alış akışıyla yükselişten sonra 15 mum "LONG kovalamayın", sert satış akışıyla düşüşten sonra "SHORT kovalamayın". |
+| Son 15 dk akış | Akış durumu, tahmini delta (%) ve hareketin z-skoru. Sert alış akışıyla yükselişten sonra 15 mum "LONG kovalamayın", sert satış akışıyla düşüşten sonra "SHORT kovalamayın". |
 | Sıradaki oynaklık anı | En yakın zamanlanmış olay, TSİ saati, kalan süre ve tipik oynaklık çarpanı. Olay anında "ŞİMDİ". FOMC 7 gün içindeyse ayrıca tarihi gösterilir. |
 | Fonlama | Bir sonraki fonlamaya kalan süre. |
 | Oynaklık (1 dk ATR) | 1 dakikalık ortalama hareket (%). Mum boyu 4 ATR'yi aşarsa 5 mum boyunca "aşırı mum" uyarısı verir. |
 | Likidite (kayma çarpanı) | Amihud ölçüsüne göre piyasanın ince olup olmadığı ve kaymanın kaç kat arttığı. |
-| Bağlam (bilgi, sinyal değil) | 15 dakikalık trend yönü ve fiyatın VWAP'a göre konumu. |
-| Haftalık pivot (P) | Geçen haftanın (yüksek + düşük + kapanış) / 3 seviyesi ve fiyatın bu seviyeye uzaklığı (%). |
-| Uyarı | Yanlış zaman dilimi ya da eksik hacim verisi. |
+| Bağlam (bilgi, sinyal değil) | Fiyatın 15 dakikalık EMA50'ye ve günlük VWAP'a göre konumu. |
 
 **Grafikte:**
 - VWAP ve ±2σ bantları.
 - Önceki gün yüksek/düşük (gri).
 - Asya seansı yüksek/düşük (mor).
-- Haftalık pivot P (açık mavi, kalın).
 - Beklenen hareket kutusu (mavi): Seçilen ufukta fiyatın %80 olasılıkla kalacağı aralık.
 - Kovalama uyarısı sırasında turuncu arka plan.
 - Zamanlanmış oynaklık anlarında mor arka plan.
@@ -56,12 +53,23 @@
 
   - ABD tatilleri (2028 sonuna kadar) ve FOMC tarihleri (2027 sonu, 2028 Ocak) gösterge içinde tanımlıdır.
   - Fonlama dakikaları, çeyrek saat başları, 16:00 ET ve hafta içi 18:00 ET eşiği iki yılda geçmediği için eklenmedi.
-- **Haftalık pivot:** Fiyat bu seviyeye ilk dokunduğunda, rastgele seviyelere göre 15 dakika içinde 4–7 baz puan daha fazla geri itilir ve %5 daha sık tutunur. Seviyede oynaklık da azalır. Bu fark 22 paritede, iki yılda da görüldü.
+- **Haftalık pivot (v5.5'te kaldırıldı):**
+  - v5.3'te, rastgele seviyelerden daha iyi tuttuğu sonucuyla eklenmişti.
+  - Daha sıkı testte pivot, aynı haftada hemen yanındaki (%0,3–0,75) sahte seviyelerden farksız çıktı: 2025'te +0,1, 2026'da +1,9 baz puan; ikisi de anlamsız.
+  - Eski test, pivotu haftanın açılışına yakın rastgele seviyelerle kıyaslıyordu; bu kontrol farkı abartıyordu. Bağımsız doğrulama da aynı sonucu buldu.
+- **Haftalık ve aylık seviyeler (R1, S1, R2, S2, aylık pivot, önceki hafta ve ay yüksek/düşük):**
+  - Hiçbiri yakınındaki sahte seviyelerden daha iyi tutmuyor.
+  - Önceki hafta ve önceki gün uçları ilk temasta biraz daha sık kırılıyor (2–8 baz puan). Bu fark maliyetin altında.
+  - Bu yüzden panele eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 9.
 - **Topluluk göstergelerindeki seviyeler (SMC/ICT, Volume Profile, pivotlar):**
   - FVG, rastgele seviyeden daha sık kırılır.
   - Order Block, gün açılışı, VWAP ve 4 saatlik pivot rastgele seviyeden farksızdır.
   - Önceki günün POC seviyesi yalnızca zayıf bir fark gösterir.
   - Bu yüzden bu seviyeler panele eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 7.
+- **OI (açık pozisyon):**
+  - Oynaklık tahminine katkısı yok: örneklem dışı R² artışı 0,0003, eşik 0,005.
+  - Basit testte görünen katkı, Binance OI verisindeki 5 dakikalık zaman kaymasından geliyordu.
+  - Bu yüzden eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 9.
 - **"Hareket coine mi özel, piyasa geneli mi?" ayrımı:** 21 altcoinde test edildi; sert hareket sonrası dönüşü iki yılda tutarlı biçimde ayırmıyor. Eklenmedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 8.
 - **TradingView'in yerleşik göstergeleri (48 gösterge test edildi):**
   - Hiçbiri 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
@@ -72,7 +80,7 @@
 ## Talimat Kartı
 
 1. Kodu almak için GitHub'da dosyanın **Raw** sayfasını açın. **Ctrl+A** ve **Ctrl+C** ile kopyalayın. Pine Düzenleyici'de **Ctrl+A** ve **Ctrl+V** ile yapıştırın. Son satırda `// VSP SONU` yazısını görmelisiniz.
-2. **Kaydet**'e, ardından **Grafiğe ekle**'ye basın. Gösterge alt bölmede açılırsa sağ tıklayıp **Taşı (Move to) → Yukarıdaki mevcut bölme (Existing pane above)** seçeneğini kullanın.
+2. **Kaydet**'e, ardından **Grafiğe ekle**'ye basın. Gösterge alt bölmede açılırsa sağ tıklayıp **Taşı (Move to) → Yukarıdaki mevcut bölme (Existing pane above)** seçeneğini kullanın. Panel son mumları kapatırsa grafiği fareyle biraz sola sürükleyin ya da Ayarlar → **Görünüm** → **Panel konumu**'nu değiştirin.
 3. Ayarlar → **Maliyet** bölümünde borsanızın maker ve taker komisyonlarını ve girişte kullandığınız emir tipini seçin. Bu bilgiler yalnızca "Hareket / maliyet" satırı için kullanılır.
 4. Ayarlar → **Piyasa koşulu** bölümünde şunları seçin:
    - Paritenizin fonlama aralığını (8, 4 ya da 1 saat).
@@ -95,3 +103,5 @@
 - Tahmini delta, gerçek taker deltasıyla yaklaşık 0,67 korelasyonludur; birebir aynı değildir.
 - Zamanlanmış oynaklık çarpanları ortalamadır. ABD veri etkisi, takvimde önemli veri olan günlerde yoğunlaşır; gösterge veri takvimini bilmez.
 - Ücretsiz planda 1 dakikalık grafikte yaklaşık 5.000 mum (3,5 gün) yüklenir. Hesapların ilk 1–1,5 günü ısınma dönemidir.
+- Grafikteki seviyeler (VWAP, önceki gün, Asya) yalnızca bilgi içindir. Hiçbiri testlerde rastgele seviyelerden daha iyi tutmadı.
+- v5.3'te eklenen haftalık pivotun kanıtı, daha sıkı testte tutmadı. Bu yüzden v5.5'te kaldırıldı.

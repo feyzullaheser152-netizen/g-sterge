@@ -109,6 +109,7 @@ Limit emirler, kenarın bulunduğu anlarda değil, fiyat aleyhe giderken doluyor
 **OI ve long/short oranı (`oi_test.py`, `oi_base.py`; 10 parite, 5 dakikalık metrikler):**
 - OI sıçraması ya da düşüşü: Tutarsız.
 - Kalabalık short (L/S oranı en düşük %5'lik dilim) → long: Piyasa yönünden arındırıldıktan sonra 2025'te +4 ile +10 bp, 2026'da 30–60 dakikalık ufukta yalnızca +0,6 ile +0,9 bp. 1 dakikalık işlem için yetersiz; ayrıca TradingView'de bu veri yok.
+- Not (v5.5): Binance metrics verisinde T damgalı satır, T ile T+5 dk arasındaki işlemleri yansıtıyor (bölüm 9b). Bu testlerde kayma düzeltilmemişti; düzeltme yalnızca etkileri küçültür, sonuç değişmez.
 
 **BVC tahmini deltası (`bvc_check.py`):**
 - Gerçek taker deltasıyla korelasyon 0,67.
@@ -188,7 +189,7 @@ Fark maliyetin çok altında.
 
 | Seviye | Tepki farkı (2025 / 2026) | Tutma farkı (puan) | Oynaklık (seviye / rastgele) | Sonuç |
 |---|---|---|---|---|
-| Haftalık pivot P | +4,4 / +7,2 bp | +4,8 / +5,0 | 0,94 / 0,99 ve 0,88 / 0,92 | **Tutarlı; göstergeye eklendi (v5.3)** |
+| Haftalık pivot P | +4,4 / +7,2 bp | +4,8 / +5,0 | 0,94 / 0,99 ve 0,88 / 0,92 | v5.3'te eklendi. **Bölüm 9'daki sıkı kontrolde tutmadı; v5.5'te kaldırıldı.** |
 | Önceki gün POC | +1,3 / +1,8 bp | +3,4 / +0,7 | 0,96 / 0,98 | Zayıf |
 | Önceki gün VAH | +0,4 / +1,8 bp | +3,2 / +1,1 | — | Zayıf |
 | Önceki gün VAL | +1,1 / −0,4 bp | +2,5 / +0,1 | — | Tutarsız |
@@ -264,3 +265,84 @@ Notlar:
 - Grafikte en fazla 5.000 mum yükleniyor. 1 dk grafikte bu yaklaşık 3,5 gün demek; ilk 1–1,5 gün ısınma dönemi.
 - request.* çağrıları için sınır 40; VSP 5 tane kullanıyor.
 - Gösterge (teknik) alarmları ücretsiz planda büyük olasılıkla kullanılamıyor. Bu yüzden VSP'nin uyarıları grafikte görsel olarak verilir.
+
+## 9. Haftalık/aylık seviyeler ve OI (v5.5; bağımsız doğrulama)
+
+### 9a. Seviyeler, yakın placebo kontrolüyle (`levels2.py`, `levels2_rob.py`, `levels3.py`; 22 parite)
+
+**Yöntem:**
+- Bölüm 7'deki ölçümler aynı: ilk temastan 15 dk sonra seviyeden geri itilme (bp), tutma oranı, oynaklık.
+- **Yeni kontrol:** Her gerçek seviye için aynı dönemde, seviyenin %0,3–1,5 yakınına (rastgele yön) kaydırılmış 4 sahte seviye.
+- Bölüm 7'deki eski kontrol, dönemin açılış fiyatına ±%1 uzaklıktaki rastgele seviyelerdi. Bu seviyelere çoğunlukla dönemin başında, fiyat zaten yanındayken dokunuluyor; bağlamları gerçek seviyelerinkinden farklı.
+- Standart hata olay haftasına göre kümelendi.
+- Ön kayıtlı kural: Bir seviye ancak 2025 ve 2026'da fark ≥ +3 bp, t ≥ 2 ve tutma farkı > 0 ise eklenir.
+
+**Haftalık pivot P, farklı kontrollere karşı (fark bp, t):**
+
+| Kontrol | 2025 | 2026 |
+|---|---|---|
+| Yakın sahte seviye %0,3–0,75 | +0,1 (0,1) | +1,9 (1,0) |
+| Orta %0,75–1,5 | +3,1 (1,0) | +3,7 (2,2) |
+| Uzak %1,5–3 | −3,0 (−1,2) | +4,9 (2,8) |
+| Eski: açılış ±%1 | +5,3 (1,8) | +5,6 (2,9) |
+
+- Pivotun hemen yanındaki sahte seviyeler pivotla aynı davranıyor; tutma farkı ≈ 0.
+- Yani bölüm 7'deki fark, pivotun kendisinden değil, kontrolün seçiminden geliyordu.
+- **Bağımsız doğrulama** (ayrı kod, 20 farklı tohum): yakın placeboya karşı +1,6 (t 0,7) / +2,2 (t 1,4); 20 tohumun hiçbirinde kural geçmedi. Eski kontrole karşı bile 20 tohumdan yalnızca birinde geçti.
+
+**Diğer seviyeler (yakın placeboya karşı fark bp, t; 2025 / 2026):**
+
+| Seviye | Fark | Sonuç |
+|---|---|---|
+| Haftalık R1 / S1 / R2 / S2 | −5 ile +11 bp, t ≤ 2,1, işaret tutarsız | Fark yok |
+| Önceki hafta düşük | −7,9 (−3,3) / −5,8 (−1,8); tutma −6,3 / −3,5 puan | Daha sık kırılıyor |
+| Önceki hafta yüksek | −3,8 (−1,6) / −3,9 (−1,2) | Biraz daha sık kırılıyor |
+| Aylık P / R1 / S1 / önceki ay yüksek-düşük | Küçük örnek, işaret tutarsız | Fark yok |
+| Önceki gün düşük | −3,3 (−3,3) / −2,2 (−1,5) | Biraz daha sık kırılıyor |
+| Önceki gün yüksek | −1,5 (−1,7) / −0,3 (−0,3) | Fark yok |
+| Asya yüksek / düşük | −1,3 ile −0,3 bp | Fark yok |
+
+- Önceki hafta düşüğü bağımsız doğrulamada da aynı çıktı: −8,1 (t −2,8) / −6,7 (t −2,2), parite tutarlılığı %23.
+- Önceki dönem uçlarının ilk temasta daha sık kırılması, stop emirlerinin bu seviyelerin hemen ötesinde biriktiği görüşüyle uyumlu. Ancak fark (2–8 bp) maliyetin altında.
+
+**Karar:**
+- Haftalık pivot göstergeden kaldırıldı (v5.5).
+- Yeni seviye eklenmedi.
+- Önceki gün ve Asya çizgileri bilgi amaçlı kaldı; kartlarda ve kodda "tutan seviye" iddiası yok.
+
+### 9b. OI (açık pozisyon) ve oynaklık (`oi_vol.py`, `oi_zaman.py`; 10 parite, 5 dakikalık OI)
+
+**Zaman damgası:**
+- T damgalı satırdaki OI değişimi (T−5 → T), en çok [T, T+5) dakikalarındaki hacim ve oynaklıkla ilişkili (Spearman 0,58–0,65 hacim, 0,38–0,47 oynaklık). [T−5, T) penceresinde bu değerler 0,36–0,45 ve 0,28–0,36.
+- Yani satır, yaklaşık T+5'teki durumu gösteriyor. T anında kullanmak geleceğe bakmak demek.
+- Bağımsız doğrulama bunu 10 paritenin 10'unda, iki yılda da buldu.
+- Üçüncü taraf bir ölçüm de arşivin API'ye göre 5 dk erken damgalandığını gösteriyor ([qOeOp/trade#1250](https://github.com/qOeOp/trade/pull/1250)). Binance'te bu konuda yanıtlanmış bir belge bulunamadı ([binance-public-data#509](https://github.com/binance/binance-public-data/issues/509)).
+- TradingView'de `BORSA:SEMBOL.P_OI` biçiminde OI sembolleri var. Ücretsiz planda Pine içinden çalıştığı resmi kaynakla doğrulanamadı.
+
+**Sonraki 15 dk oynaklığına ek bilgi** (EWMA + hacim tabanına göre, örneklem dışı R² artışı, parite medyanı):
+
+| Zamanlama | Konum hedefi (log \|getiri\|) | Oynaklık hedefi (log RV) |
+|---|---|---|
+| Dürüst (OI 5 dk gecikmeli) | +0,0002 / +0,0003 | +0,0004 / +0,0008 |
+| Kaymış (geleceğe bakan) | +0,0046 / +0,0067 | +0,017 / +0,023 |
+
+- Dürüst zamanlamada katkı eşiğin (0,005) yaklaşık 20'de biri. Kaymış zamanlama katkıyı 20–25 kat şişiriyor.
+- Bağımsız doğrulama aynı sonucu verdi.
+
+**Karar:** OI eklenmedi. Bir `request.*` çağrısı ve ek veri bağımlılığı getirirdi; karşılığında bilgi yok.
+
+### 9c. Yan bulgu: Hacim ve beklenen hareket kutusu
+
+- Son 15 dk hacmi, önceki 24 saatin ortalamasına göre düşükse kutu biraz dar kalıyor; %80 kapsama %75–76. Hacim çok yüksekse kutu biraz geniş kalıyor; kapsama %84–85. İki yılda da aynı yönde.
+- Örneklem dışı R² artışı yalnızca +0,001–0,004.
+- **Karar:** Eklenmedi. Fark kullanımda hissedilmeyecek kadar küçük.
+
+### 9d. Panel (v5.5)
+
+- Kullanıcının ekran görüntüsünde panel son mumların üstünü kapatıyordu. Satırlar kısaltıldı:
+  - "Sıradaki oynaklık anı" yaklaşık yarıya indi.
+  - "Uyarı" satırı kaldırıldı; aynı bilgi zaten DURUM satırında.
+  - Haftalık pivot satırı kaldırıldı.
+- Sayılar Türkçe biçime geçti (ondalık virgül, %4 yazımı).
+- "Bağlam" satırı artık neyi ölçtüğünü açıkça yazıyor: fiyatın 15 dk EMA50'ye ve VWAP'a göre konumu. Karşılaştırma son 15 dk kapanışıyla değil, anlık fiyatla yapılıyor.
+- `request.*` çağrısı 5'ten 3'e indi.
