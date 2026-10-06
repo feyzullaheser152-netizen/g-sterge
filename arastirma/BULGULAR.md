@@ -47,11 +47,47 @@ Maliyet referansı: Gidiş-dönüş yaklaşık 8–13 baz puan.
   - v3.0: 296 işlemde −77R.
   - v4.0: 19 işlemde −5R.
 
-## Sonraki araştırma adımı
+## 3. Binance USDⓈ-M vadeli testi (22 parite, gerçek taker delta)
 
-Binance USDⓈ-M vadeli verisiyle (`data.binance.vision`) çok pariteli test:
-- 1 dakikalık mumlardaki **gerçek taker alış hacmi** ile gerçek delta.
-- 5 dakikalık **OI ve long/short oranları.**
-- Birçok altcoin.
+**Veri ve yöntem:**
+- **Kaynak:** `data.binance.vision`, 1 dakikalık mumlar, Ocak 2025 – Eylül 2026. 22 parite, yaklaşık 20 milyon mum, boşluk yok.
+- **Pariteler:** BTC, ETH, SOL, XRP, DOGE, BNB, ADA, AVAX, LINK, LTC, DOT, NEAR, SUI, AAVE, UNI, ENA, 1000PEPE, WIF, ARB, OP, ZEC, HYPE.
+- **Delta:** `2 × taker alış hacmi − hacim`. Bu gerçek değerdir, tahmin değildir.
+- **Hipotezler:** Testten önce belirlendi. 2025 keşif, 2026 doğrulama dönemi olarak kullanıldı.
+- **Betikler:** `events_bn.py`, `dose.py`, `h1sim.py`.
 
-Bu test için bulut ortamının ağ izinlerine `data.binance.vision` eklenmelidir.
+**Sonuçlar** (ileri getiri, işlem yönünde, baz puan; parantez içinde getirisi pozitif çıkan parite oranı):
+
+| Hipotez | 2025 (5 / 15 dk) | 2026 (5 / 15 dk) | Sonuç |
+|---|---|---|---|
+| H1: Saldırgan akışın sürüklediği 15 dk hareket (z ≥ 3) → dönüş | +3,4 / +3,4 (%95 / %77) | +2,5 / +3,0 (%91 / %86) | **Tutarlı, ama küçük** |
+| H2b: Aşırı akış + fiyat aynı yönde → devam | −0,5 / −1,0 | −0,5 / −0,5 | Devam etmiyor, hafif dönüyor |
+| H4: 4 saatlik kırılım + güçlü akış → devam | −1,6 / −1,8 | −1,9 / −1,7 | Kırılım kısa vadede başarısız |
+| H5: BTC liderliği (altcoin geride) | +1,1 / +7,9 | +0,6 / +0,4 | 2026'da kayboldu |
+| H2: Emilim | ≈ 0 | ≈ 0 | Kenar yok |
+| H3: Tasfiye benzeri dev mum → dönüş | tutarsız | tutarsız | Kenar yok |
+| H6: Önceki gün seviyesi süpürme + karşı akış | negatif | hafif pozitif | Tutarsız |
+
+**Doz-yanıt (`dose.py`):**
+- Güvenilir bölgede (z 2–4) dönüş kenarı 1–3 baz puan.
+- Uç değerler (z ≥ 5) çok az olaydan oluşuyor ve işaretleri tutarsız.
+
+**Gerçekçi işlem simülasyonu (`h1sim.py`):** H1 sinyaline limit emirle girilip 15 dakika tutulduğunda:
+
+| | 2025 | 2026 |
+|---|---|---|
+| Limit dolum oranı | %95 | %93 |
+| Dolan işlemlerde brüt getiri | −2,3 bp | +0,5 bp |
+| Net, limit giriş + limit çıkış (4 bp) | −6,3 bp | −3,5 bp |
+| Net, limit giriş + piyasa çıkış (8 bp) | −10,3 bp | −7,5 bp |
+| Net, piyasa / piyasa (12 bp) | −11,9 bp | −9,8 bp |
+
+Limit emirler, kenarın bulunduğu anlarda değil, fiyat aleyhe giderken doluyor (ters seçim). Bu yüzden limit emir maliyet avantajını geri alıyor.
+
+## Genel sonuç (güncel)
+
+- 1 dakikalık vadeli işlemlerde istatistiksel olarak tutarlı tek etki, saldırgan akış sonrası kısa vadeli dönüştür. Büyüklüğü 1–3 baz puandır.
+- Standart (VIP 0) komisyonlarla bu etki her senaryoda maliyetin altında kalır. Net getiri negatiftir.
+- Akademik bulguyla birebir uyumludur ([arXiv 2608.21888](https://arxiv.org/abs/2608.21888)). Bu etkiyi kâra çevirebilenler maker iadesi alan piyasa yapıcılardır.
+- **Uygulamadaki anlamı:** Perakende komisyonlarıyla 1 dakikalık grafikte göstergeye dayalı yön tahmini, kanıta göre net zarar üretir.
+

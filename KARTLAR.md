@@ -105,6 +105,9 @@ v4.0 bu üç soruna göre yeniden kuruldu.
 - **v4.0 mantığı:** 917 bin mum ve 2.746 işlem üzerinde maliyet öncesi kenar yok. Trend kurulumunun brüt kenarı anlamlı biçimde negatif (−0,19R, t −30).
 - **Klasik kalıplar:** 15 dk dönüş, VWAP sapması, süpürme, kırılım, sıkışma, dev mum ve saat etkileri test edildi. Hiçbiri maliyeti (8–13 baz puan) aşan ve iki yılda tutarlı bir kenar göstermedi.
 - **Uygulamadaki anlamı:** Göstergenin AL/SAT sinyalleri şu an **kanıtlanmış bir kenara sahip değildir**. Gerçek parayla işlem için kullanılmamalıdır.
+- **Binance vadeli testi (22 parite, 21 ay, gerçek taker delta):**
+  - Tutarlı tek etki, saldırgan akış sonrası 5–15 dakikalık dönüş (1–3 baz puan).
+  - Limit ya da piyasa emri fark etmeksizin, gerçekçi maliyetlerle net sonuç her senaryoda negatif (−3,5 ile −12 baz puan).
 
 ## Dürüst Not
 
