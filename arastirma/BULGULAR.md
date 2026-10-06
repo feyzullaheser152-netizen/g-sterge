@@ -115,6 +115,7 @@ Limit emirler, kenarın bulunduğu anlarda değil, fiyat aleyhe giderken doluyor
 - Gerçek taker deltasıyla korelasyon 0,67.
 - BVC ile tanımlanan "sert akış" sonrası dönüş: 2025'te +3,8 / +4,7 bp, 2026'da +1,4 / +1,8 bp (5 / 15 dk).
 - Bu sonuç, göstergedeki "kovalamayın" uyarısının dayanağıdır.
+- Not (v5.6): Bölüm 10c'deki ayrıntılı testte etki yalnızca ilk mumda ve yalnızca sert satış tarafında çıktı.
 
 **Karar:** Göstergeden AL/SAT sinyalleri kaldırıldı (v5.0). Kullanıcı kararı kendisi verir; gösterge maliyet, koşul, akış ve pozisyon büyüklüğü bilgisi sunar.
 
@@ -346,3 +347,100 @@ Notlar:
 - Sayılar Türkçe biçime geçti (ondalık virgül, %4 yazımı).
 - "Bağlam" satırı artık neyi ölçtüğünü açıkça yazıyor: fiyatın 15 dk EMA50'ye ve VWAP'a göre konumu. Karşılaştırma son 15 dk kapanışıyla değil, anlık fiyatla yapılıyor.
 - `request.*` çağrısı 5'ten 3'e indi.
+
+## 10. Kanıt temizliği ve eksik kategoriler (v5.6; çoklu ajan, bağımsız doğrulama)
+
+Bir denetimde VSP'deki bazı kuralların test edilmediği, bazı kart rakamlarının da iki ayrı testten karıştırıldığı görüldü. Bu bölüm, göstergedeki her kuralı ve daha önce test edilmemiş gösterge kategorilerini aynı yöntemle sınar.
+
+**Ortak ölçü ("× normal"):**
+- x = |r1| / σ_taban; σ_taban, önceki 1440 mumun r1 standart sapmasıdır (bir mum gecikmeli).
+- Kalın kuyruklar yüzünden x'in sıradan bir dakikadaki ortalaması 1 değil, 0,725 (2025) ve 0,701 (2026) (`taban_oran.py`).
+- "× normal" = pencere ortalaması / bu taban. Bölüm 8b'deki çarpanlar farklı bir normalizasyonla hesaplandığından rakamlar biraz farklıdır.
+- Ön kayıtlı renk kuralı: Bir koşul iki yılda da ≥ ×3 ise kırmızı, ≥ ×1,5 ise sarı (v5.6'da mor arka plan); aksi hâlde DURUM'u etkilemez.
+- Not: Kural ilk yazıldığında eşikler ham x'e uygulanacak biçimde yazılmıştı. Bu ölçek hatası sonuçları gördükten sonra düzeltildi. Fonlama, iki yönlü akış ve likidite için iki okuma aynı kararı veriyor; aşırı mumda yalnızca sarı pencerenin uzunluğu değişiyor.
+
+### 10a. DURUM kuralları (`kural_durum.py`, `kural_likidite.py`, `taban_oran.py`)
+
+| Kural (v5.5) | Ölçüm 2025 / 2026 | Karar (v5.6) |
+|---|---|---|
+| Fonlama saati ±3 dk → kırmızı | ×1,00 / ×1,04; ≥ ×1,5 olan parite 0/22; komşu saatlere göre fark t −0,7 / 0,4. Ortalama fonlama ödemesi 0,83 / 0,66 bp. | **Kaldırıldı** (DURUM'u etkilemez; fonlama satırı da kaldırıldı) |
+| Aşırı mum (> 4 ATR) → 5 mum kırmızı | Sonraki 1–5 mum ×2,11 / ×1,76; hiçbir mum iki yılda ≥ ×3 değil. ≥ ×1,5 kalan mum sayısı 4. | **Kırmızıdan sarıya (mor arka plan)**; süre: spike'tan sonraki 4 mum (5. mum 2026'da ×1,498) |
+| İki yönde sert akış → sarı | ×2,36 / ×2,35 (t 8,6 / 12,4); n 1.825 / 1.465 bölüm. Göstergedeki repaint yapmayan tanımla (yalnızca kapanmış mumlar) ×2,13 / ×2,10. | **Sarı kaldı (mor arka plan)** |
+| Likidite ince (Amihud liqMult > 1,5) → sarı, kayma × liqMult | Sonraki mumda ×0,82 / ×0,83 (daha sakin). İleri Kyle λ oranı (ref 0,8–1,2 kovası): liqMult 1,5–2 → 1,00 / 0,96; 2–3 → 0,83 / 0,80; =3 → 0,58 / 0,65. Kural ≥ 1,3 istiyordu; artış yok. Üst kovalardaki düşüş büyük ölçüde parite bileşiminden geliyor; parite içinde λ yatay (0,97–1,05). | **Tamamen kaldırıldı** (maliyetten, DURUM'dan ve panelden) |
+
+- Likidite testinde gerçek taker deltası (2·tbv − v) yalnızca doğrulama için kullanıldı. Sabit büyüklükteki emre en yakın ölçüde (ham λ) artış yalnızca %7–21 (en uç kovada %34–81); liqMult ise ×1,7–3 iddia ediyordu. Maliyete etkisi en çok ≈ 0,004 puan.
+- liqMult kalıcı bir şeyi doğru ölçüyor: fiyat hareketine göre düşük hacim. Ama bu ne yüksek oynaklık ne de anlamlı ek kayma demek.
+
+### 10b. Zamanlanmış olay pencereleri (`olay_pencere.py`, `olay_suresi.py`)
+
+Dakika başına × normal (22 parite; ABD verisi 08:30 için FOMC günleri hariç tüm Salı–Cuma günleri):
+
+| Olay | Olay dakikası 2025 / 2026 | ≥ ×1,5 ardışık pencere (iki yılda) | v5.6 penceresi |
+|---|---|---|---|
+| ABD verisi 08:30 ET | ×2,93 / ×2,10 | yalnızca 08:30 (08:31 ×1,60 / ×1,48) | 08:30 |
+| NY açılışı 09:30 ET | ×1,89 / ×1,92; 09:31 ×2,20 / ×2,09 | 09:30–09:43; ilk saat ortalaması ×1,62 / ×1,63 | 09:30–09:43 |
+| ABD verisi 10:00 ET | ×2,05 / ×1,90 | 10:00–10:08 | 10:00–10:08 |
+| Pazar 18:00 ET | ×2,44 / ×4,32 | 18:00–18:07 | 18:00–18:07 |
+| FOMC 14:00 ET | ×6,87 / ×7,50 | 14:00–14:13; 14:00–14:05 ortalaması ×3,9 / ×3,9; 14:00–14:44 ortalaması ×2,64 / ×2,36; 13:59 ×4,84 / ×2,32 | 13:59–14:44 mor, 14:00–14:05 kırmızı |
+
+- Olaydan önceki dakikalar (FOMC'de 13:59 hariç) normal düzeyde. Bu yüzden v5.4'teki "2 dk önceden başlayan" pencereler kaldırıldı; yaklaşan olay durum satırındaki geri sayımla görülür.
+
+### 10c. Kovalama uyarısı (`kural_kovalama.py`, bağımsız kontrol `kovalama_yon.py`)
+
+Olay: Önceki 15 mumda aynı yönde akış olmayan ilk sert akış mumu (Pine'daki BVC tanımı). L = olaydan sonra giriş gecikmesi (mum). Kayıp = akış yönünde girenin 15 dk sonraki ortalama zararı (bp).
+
+| L | 2025 (t; + parite) | 2026 (t; + parite) |
+|---|---|---|
+| 0 | +2,21 (1,0; %77) | +1,75 (1,0; %68) |
+| 1–4 | −0,49 (−0,2; %36) | +0,83 (0,6; %68) |
+| 5–9 | −2,67 | +1,36 |
+| 10–14 | −5,63 | +2,56 |
+
+- Ön kayıtlı kurala göre (her kova ≥ +1 bp, iki yılda) yalnızca ilk mum geçiyor. v5.5'teki 15 mumluk uyarı süresi kanıtsızdı.
+- Bağımsız doğrulayıcı bütün kova sayılarını birebir yeniden üretti.
+- **Yön ayrımı (iki yılda da aynı; bağımsız kodla birebir yeniden üretildi):**
+
+| L = 0 | 5 dk 2025 / 2026 (t; + parite) | 15 dk 2025 / 2026 (t; + parite) |
+|---|---|---|
+| Sert satıştan sonra SHORT | +5,32 (2,8; %95) / +3,30 (1,9; %100) | +5,71 (1,9; %91) / +3,37 (1,3; %86) |
+| Sert alıştan sonra LONG | +1,30 (1,0; %73) / +0,39 (0,3; %59) | −1,04 (−0,4; %36) / +0,29 (0,1; %64) |
+
+- "LONG kovalamayın" uyarısı iki yılda da desteklenmiyor; kaldırıldı. Kalan uyarı: sert satış akışının ardındaki tek mum.
+- BVC filtresi (imb15 ≥ 0,15) pratikte bir şey elemiyor: |z15| ≥ 3 olaylarının %99,7'si filtreden geçiyor. Uyarı fiilen "sert 15 dk düşüş" uyarısıdır.
+- v5.5 kartındaki "1,4–4,7 bp, paritelerin %77–95'i" ifadesi iki ayrı testten (BVC ve gerçek delta) karışmıştı; düzeltildi.
+- Etki maliyetin (8–12 bp) altında: işlem kenarı değil, "o mumda girersen ortalamada geride başlarsın" bilgisi.
+
+### 10d. Beklenen hareket ufku ve rejim (`kural_ufuk.py`)
+
+- %50 ve %80 katsayıları 1–240 dk ufuklarının hepsinde 0,61 / 1,23'ten %10'dan az sapıyor (en büyük: 1 dk'da +7,8%). Ufka özel katsayı gerekmedi.
+- 1 dk ufukta beklenen hareket mumların yalnızca %21–30'unda 8 bp maliyeti geçiyor; 15 dk'da %93–97.
+- **Rejim:** Kısa EWMA, piyasa sakinleşince kutuyu fazla daraltıyor (ρ en alt ondalığında %80 kapsama %73), hızlanınca fazla genişletiyor (%87–88).
+  - Karışım var = 0,8·ewVar + 0,2·σ_taban² bu sapmayı 2026'da 4,26'dan 1,83 puana indiriyor; paritelerin %100'ünde iyileşme var.
+  - Ancak ön kayıtlı "genel kapsama kötüleşmesin (0,5 puan tolerans)" şartı kaldı: %80'de 1,43'e karşı 0,88 puan sapma. Karşılaştırma mevcut modelin lehine eğik, çünkü 0,61 / 1,23 2026 verisiyle de belirlenmişti.
+  - **Karar:** Değişiklik yok. Karışım (w = 0,8; katsayılar 0,575 / 1,152) önceden kaydedildi; Ekim 2026 sonrası yeni veride adil kıyasla yeniden sınanacak.
+
+### 10e. Daha önce test edilmemiş kategoriler (`kategori_mum.py`, `kategori_fib.py`, `kategori_prim.py`, `kategori_genislik.py`)
+
+| Kategori | Ön kayıtlı kural | Sonuç |
+|---|---|---|
+| Mum formasyonları (yutan, çekiç, kayan yıldız, doji, iç/dış mum, üç asker/karga, marubozu; bağlam filtreli sürümler) | 15 dk'da iki yılda \|etki\| ≥ 3 bp, aynı işaret, t ≥ 2 | 12 formasyonun hiçbiri geçmedi; en büyük etki üç kara karga −2,2 / −1,1 bp |
+| Fibonacci (önceki gün ve hafta; 0,236–0,786) | Yakın placeboya karşı ≥ +3 bp, t ≥ 2, tutma > 0 | 10 seviyenin hiçbiri geçmedi (5 tohumda 0/5) |
+| Baz / prim (Binance premium index, 1 dk) | Yön: ondalık farkı ≥ 4 bp; oynaklık: R² artışı ≥ 0,005 | Yön farkı < 1 bp, işaret yıla göre değişiyor; R² artışı 0,0003–0,0010 |
+| Piyasa genişliği, piyasa z15, dominans vekili | ≥ 3 bp ya da R² artışı ≥ 0,005 | Etki ≤ 1 bp (piyasa z15'in 2025'teki +3,4 bp'si 10 Ekim 2025'ten); R² artışı 0,0018–0,0024 |
+
+- Prim verisinin zaman damgası kontrol edildi; geleceğe sızıntı yok.
+- TradingView'de CRYPTOCAP:TOTAL ve BTC.D sembolleri var, ancak ücretsiz planda 1 dk erişimi doğrulanmadı; bilgi değeri de yok.
+- Test edilmeyenler ve nedeni:
+  - Duyarlılık (Korku/Açgözlülük): veri günlük.
+  - Grafik formasyonları ve Elliott: 1 dk'da öznel ve seyrek; sıkışma kırılımı bölüm 2'de test edildi (kenar yok).
+  - Likidasyon: Binance'in kamuya açık likidasyon arşivi yok.
+  - Emir defteri / makas: Pine'da bu veri yok.
+
+### 10f. Kullanıcı isteğiyle görünüm (v5.6)
+
+- Panel (tablo) ve beklenen hareket kutusu grafikten kaldırıldı.
+- Bilgi artık durum satırında (hareket / maliyet, beklenen hareket %50 ve %80, sıradaki oynaklık anına kalan dakika) ve Veri Penceresi'nde veriliyor.
+- DURUM metni yerine arka plan rengi kullanılıyor: mor (olağandışı oynaklık), kırmızı (FOMC ilk dakikaları), turuncu (sert satıştan sonraki mum).
+- Bağlam satırı (15 dk EMA50, VWAP konumu) kaldırıldı; bölüm 6'ya göre trend göstergeleri yön bilgisi vermiyor.
+- Çizgiler varsayılan olarak en kalın (4) ve karanlık mod için açık renkli.
+- `request.*` çağrısı 3'ten 2'ye indi.
