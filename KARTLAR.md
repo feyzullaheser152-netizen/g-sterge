@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v4.0)
+## Tanım Kartı (v4.0.1)
 
 **Amaç:** 1 dakikalık kripto vadeli grafikte yalnızca komisyon ve kaymadan sonra da kâr bırakabilecek az sayıda işlemi göstermek ve sonuçları dürüstçe ölçmek.
 
@@ -98,6 +98,13 @@ v4.0 bu üç soruna göre yeniden kuruldu.
 7. Alarm için Koşul: VSP → **"Any alert() function call"** seçeneğini seçin. Mesajda emir tipi ve seviyeler hazır gelir.
 8. Gerçek parayla işlem yapmadan önce **Performans** panelindeki "Güven" satırına bakın. "Anlamlı kenar" görmeden gerçek para kullanmayın.
 9. Geliştirme için 3–5 paritede üç panelin (özellikle **Teşhis**) ekran görüntüsünü gönderin.
+
+## Test Kanıtı (21 ay BTC 1 dakikalık veri)
+
+- Ayrıntılar: `arastirma/BULGULAR.md`.
+- **v4.0 mantığı:** 917 bin mum ve 2.746 işlem üzerinde maliyet öncesi kenar yok. Trend kurulumunun brüt kenarı anlamlı biçimde negatif (−0,19R, t −30).
+- **Klasik kalıplar:** 15 dk dönüş, VWAP sapması, süpürme, kırılım, sıkışma, dev mum ve saat etkileri test edildi. Hiçbiri maliyeti (8–13 baz puan) aşan ve iki yılda tutarlı bir kenar göstermedi.
+- **Uygulamadaki anlamı:** Göstergenin AL/SAT sinyalleri şu an **kanıtlanmış bir kenara sahip değildir**. Gerçek parayla işlem için kullanılmamalıdır.
 
 ## Dürüst Not
 

@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v4.0.0
+// Vadeli Scalp Pusulasi (VSP) - v4.0.1
 // 1 dakikalik kripto vadeli islemler icin iki kurulum:
 //   1) Trend devami: ust ZD + BTC + rejim + momentum kosullari saglaninca hizli EMA'ya geri cekilmede giris
 //   2) Likidite supurme + yapi kirilimi: onceki gun / Asya / 4 saatlik uc seviyesinin otesine igne, geri kapanis ve supurme mumunun tepesinin kirilmasi
@@ -604,7 +604,7 @@ if showStats and barstate.islast
     meanR = nTr > 0 ? sumR / nTr : 0.0
     varR = nTr > 1 ? (sumR2 - nTr * meanR * meanR) / (nTr - 1) : 0.0
     sdR = math.sqrt(math.max(varR, 0.0))
-    tStat = nTr > 1 and sdR > 0 ? meanR / (sdR / math.sqrt(nTr)) : 0.0
+    tStat = nTr >= 5 and sdR > 0 ? meanR / (sdR / math.sqrt(nTr)) : 0.0
     verdict = nTr < 30 ? "Az veri (<30 işlem)" : tStat >= 2 ? "Anlamlı kenar" : tStat >= 1 ? "Zayıf kanıt" : tStat > -1 ? "Kenar yok" : "Negatif kenar"
     vCol = nTr < 30 ? color.yellow : tStat >= 2 ? cGood : tStat >= 1 ? color.yellow : tStat > -1 ? cMid : cBad
     winTxt = nTr > 0 ? str.tostring(nWin * 100.0 / nTr, "0") + "%" : "-"
