@@ -13,6 +13,7 @@ TradingView için 1 dakikalık kripto vadeli işlem göstergesi (Pine Script v6)
 - Kullanıcıya seçenek yığını sunma. En doğru çözümü seç, uygula ve kafa karıştırmayacak kadar işlevsel tut.
 - Her sohbetin sonunda, Tanım veya Talimat kartında değişiklik olduysa `KARTLAR.md` dosyasını güncelle ve kartların güncel hâlini yanıtta ver.
 - Dürüst ol: Net getiri, komisyon ve kayma etkisi ile sonuçların güvenilirliği hakkında abartma.
+- Kodu sohbete yapıştırma. Kullanıcıya GitHub'daki dosyanın **Raw** bağlantısını ver (Yol 1: Raw → Ctrl+A → Ctrl+C → Pine Düzenleyici'de Ctrl+A → Ctrl+V).
 
 ## Kod kuralları
 

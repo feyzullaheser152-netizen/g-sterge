@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v2.0)
+## Tanım Kartı (v2.1)
 
 **Amaç:** 1 dakikalık kripto vadeli grafikte yalnızca komisyon ve kaymadan sonra da kâr bırakabilecek, puanı yüksek işlemleri göstermek ve geçmiş sonuçları dürüstçe ölçmek.
 
@@ -28,11 +28,13 @@
 | Göreli hacim ≥ 1,3x | 10 | 20 |
 | Likit saat (07–21 UTC) | 5 | – |
 | Fiyat VWAP'ın karşı tarafında | – | 15 |
+| Kalabalık pozisyon (prim z-skoru ≥ 2) | −10 (kalabalık yönde) | +10 (kalabalık tarafa karşı) |
 
 **Sert filtreler:**
 - Sinyaller yalnızca mum kapanışında oluşur.
 - Fonlama saatine ±3 dakika kala sinyal verilmez.
 - Sinyaller arasında en az 5 mum olmalıdır.
+- **Aşırı mum:** Haber ve tasfiye mumlarında kayma yüksektir. Mum boyu 4 ATR'yi aşarsa trend sinyali, 8 ATR'yi aşarsa süpürme sinyali verilmez.
 - **Maliyet / risk:** Komisyon ve kaymanın toplamı riskin %30'unu aşarsa sinyal verilmez.
 
 **Risk yönetimi:**
@@ -41,17 +43,25 @@
 - **TP2 = 2R.**
 - **Zaman stopu:** TP1'e 20 mumda ulaşılmazsa pozisyon kapatılır.
 
-**Geçmiş performans:**
-- Panel, grafikte yüklü geçmişteki bütün sinyalleri bu kurallarla işler.
-- İşlem sayısını, isabet oranını, toplam net R'yi ve kâr faktörünü (PF) gösterir.
-- Komisyon ve kayma bu hesaba dahildir.
+**Geçmiş performans (sağ alttaki panel):**
+- Panel, grafikte yüklü geçmişteki bütün sinyalleri bu kurallarla işler. Komisyon ve kayma hesaba dahildir.
 - Aynı mumda hem stop hem hedef görülürse önce stop sayılır (ihtiyatlı varsayım).
+- **İşlem / isabet** ve **Net R / PF:** Toplam sonuç.
+- **Ortalama R / işlem:** Bir işlemin ortalama net getirisi.
+- **En büyük düşüş:** Bakiyenin zirveden en derin düşüşü, R cinsinden.
+- **Güven (t):** Ortalama getirinin şansa bağlı olup olmadığını ölçer.
+  - 30'dan az işlem: "Az veri".
+  - t ≥ 2: "Anlamlı kenar".
+  - 1 ≤ t < 2: "Zayıf kanıt".
+  - −1 < t < 1: "Kenar yok".
+  - t ≤ −1: "Negatif kenar".
+- **Trend devamı / Likidite süpürme:** İki kurulumun sonuçları ayrı ayrı gösterilir.
 
-**Panel satırları:** Rejim, Üst ZD, BTC, Delta, OI, Göreli hacim, Maliyet / risk, Fonlama, Trend skoru, Durum, Geçmiş işlem / isabet, Net R / PF, Uyarı.
+**Piyasa paneli (sağ üst):** Rejim, Üst ZD, BTC, Delta, OI, Prim (kalabalık), Göreli hacim, Maliyet / risk, Fonlama, Trend skoru, Durum, Uyarı.
 
 ## Talimat Kartı
 
-1. Pine Düzenleyici'de eski kodu **Ctrl+A** ile seçip silin. Kodu GitHub'daki **"Copy raw file"** düğmesiyle kopyalayın ve yapıştırın. Son satırda `// VSP SONU` yazısını görmelisiniz.
+1. Kodu almak için GitHub'da dosyanın **Raw** sayfasını açın. **Ctrl+A** ve **Ctrl+C** ile kopyalayın. Pine Düzenleyici'de **Ctrl+A** ve **Ctrl+V** ile yapıştırın. Son satırda `// VSP SONU` yazısını görmelisiniz.
 2. **Kaydet**'e, ardından **Grafiğe ekle**'ye basın. Gösterge alt bölmede açılırsa sağ tıklayıp **Taşı (Move to) → Yukarıdaki mevcut bölme (Existing pane above)** seçeneğini kullanın.
 3. Grafiği **1 dakika** yapın ve **vadeli (.P)** parite açın, ör. BINANCE:ETHUSDT.P. OI verisi yalnızca vadeli paritelerde gelir.
 4. Ayarlar → **Risk ve maliyet** bölümünde kendi komisyonunuzu girin:
@@ -64,9 +74,10 @@
    - Etiketin üzerine gelince giriş, stop, TP ve maliyet bilgileri görünür.
 7. **Maliyet / risk** satırı kırmızıysa, o paritede o anki oynaklık komisyonu karşılamıyordur. Bu durumda sinyal gelmez. Bu bir hata değil, korumadır. BTC'de taker emirle sık görülür; daha oynak paritelere geçin ya da limit emir kullanın.
 8. Alarm için Koşul: VSP → **"Any alert() function call"** seçeneğini seçin. Mesajda kurulum, skor ve seviyeler hazır gelir.
-9. Gerçek parayla işlem yapmadan önce panelin **Net R / PF** satırına bakın:
-   - PF 1,2'nin altındaysa ya da işlem sayısı 50'den azsa sonuç güvenilir değildir.
-   - Ayarları birlikte iyileştirelim.
+9. Gerçek parayla işlem yapmadan önce sağ alttaki **Performans** paneline bakın:
+   - "Güven" satırı **"Anlamlı kenar"** demiyorsa sonuç şanstan ayırt edilemiyor demektir.
+   - Bir kurulum sürekli eksideyse Ayarlar → Sinyal bölümünden onu kapatın.
+   - Panelin ekran görüntüsünü gönderin, ayarları birlikte iyileştirelim.
 
 ## Dürüst Not
 

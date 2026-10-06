@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v2.0.0
+// Vadeli Scalp Pusulasi (VSP) - v2.1.0
 // 1 dakikalik kripto vadeli islemler icin iki kurulum:
 //   1) Trend devami: ust ZD + VWAP + EMA trendinde geri cekilme sonrasi donus
 //   2) Likidite supurme: onceki gun / Asya / salinim seviyesinin altina-ustune igne atip geri kapanis
@@ -38,6 +38,8 @@ rsiMaxL = input.float(72, "Alışta en yüksek RSI", group = grpF)
 rsiMinS = input.float(28, "Satışta en düşük RSI", group = grpF)
 swLeft  = input.int(10, "Salınım noktası sol mum", minval = 1, group = grpF)
 swRight = input.int(3, "Salınım noktası sağ mum", minval = 1, group = grpF)
+premLen = input.int(240, "Prim z-skoru penceresi (mum)", minval = 20, group = grpF)
+premZMax = input.float(2.0, "Kalabalık sayılan prim z-skoru", step = 0.5, group = grpF)
 
 grpR = "Risk ve maliyet"
 atrLen     = input.int(14, "ATR uzunluğu", minval = 1, group = grpR)
@@ -52,12 +54,14 @@ timeStop   = input.int(20, "Zaman stopu (mum, TP1 öncesi)", minval = 1, group =
 feeSide    = input.float(0.05, "Tek yön komisyon %", step = 0.005, group = grpR)
 slipSide   = input.float(0.01, "Tek yön kayma %", step = 0.005, group = grpR)
 maxCostR   = input.float(0.30, "En yüksek maliyet / risk (R)", step = 0.05, group = grpR)
+spikeAtr   = input.float(4.0, "Aşırı mum sınırı (ATR x)", step = 0.5, group = grpR)
 
 grpV = "Görünüm"
 showBands = input.bool(true, "VWAP bantları", group = grpV)
 showLiq   = input.bool(true, "Likidite seviyeleri", group = grpV)
 showPos   = input.bool(true, "Giriş/Stop/TP seviyeleri", group = grpV)
-showPanel = input.bool(true, "Panel", group = grpV)
+showPanel = input.bool(true, "Piyasa paneli", group = grpV)
+showStats = input.bool(true, "Performans paneli", group = grpV)
 
 // === Temel hesaplar ve cizimler ===
 emaF = ta.ema(close, emaFastLen)
@@ -89,6 +93,16 @@ oiSym = syminfo.prefix + ":" + syminfo.ticker + "_OI"
 oi = request.security(oiSym, timeframe.period, close, ignore_invalid_symbol = true)
 oiCh = not na(oi) and not na(oi[oiLen]) and oi[oiLen] != 0 ? (oi - oi[oiLen]) / oi[oiLen] * 100 : na
 oiOk = not na(oiCh)
+
+// Vadeli prim (premium index): kendi gecmisine gore z-skoru. Asiri pozitif = longlar kalabalik
+premSym = syminfo.prefix + ":" + syminfo.ticker + "_PREMIUM"
+prem = request.security(premSym, timeframe.period, close, ignore_invalid_symbol = true)
+premMa = ta.sma(prem, premLen)
+premSd = ta.stdev(prem, premLen)
+premZ = not na(prem) and not na(premSd) and premSd > 0 ? (prem - premMa) / premSd : na
+premOk = not na(premZ)
+longCrowd = premOk and premZ >= premZMax
+shortCrowd = premOk and premZ <= -premZMax
 
 // Likidite seviyeleri: onceki gun, Asya seansi (00-08 UTC), son salinim noktalari
 pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
@@ -139,6 +153,10 @@ dlt    = volume * clv
 dSumV  = math.sum(volume, dLen)
 dRatio = dSumV > 0 ? math.sum(dlt, dLen) / dSumV : 0.0
 
+// Asiri mum: haber/tasfiye mumunda kayma yuksek olur
+spikeT = rng > spikeAtr * nz(atr[1], atr)
+spikeS = rng > spikeAtr * 2 * nz(atr[1], atr)
+
 // Zaman: likit saatler ve fonlama penceresi (UTC)
 hUtc        = hour(time, "UTC")
 liquidHour  = hUtc >= 7 and hUtc < 21
@@ -154,11 +172,11 @@ trendReg = er >= erMin
 longTrig  = ta.crossover(close, emaF) or (low <= emaF and close > emaF and close > open)
 shortTrig = ta.crossunder(close, emaF) or (high >= emaF and close < emaF and close < open)
 
-tScoreL = (htfUp ? 20 : 0) + (isBtc or btcUp ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diP > diM ? 10 : 0) + (dRatio >= dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
-tScoreS = (htfDn ? 20 : 0) + (isBtc or btcDn ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diM > diP ? 10 : 0) + (dRatio <= -dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
+tScoreL = (longCrowd ? -10 : 0) + (htfUp ? 20 : 0) + (isBtc or btcUp ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diP > diM ? 10 : 0) + (dRatio >= dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
+tScoreS = (shortCrowd ? -10 : 0) + (htfDn ? 20 : 0) + (isBtc or btcDn ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diM > diP ? 10 : 0) + (dRatio <= -dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
 
-tValidL = useTrend and upTrend and longTrig and rsi < rsiMaxL and close < vwapU
-tValidS = useTrend and dnTrend and shortTrig and rsi > rsiMinS and close > vwapL
+tValidL = useTrend and upTrend and longTrig and rsi < rsiMaxL and close < vwapU and not spikeT
+tValidS = useTrend and dnTrend and shortTrig and rsi > rsiMinS and close > vwapL and not spikeT
 
 // === Kurulum 2: Likidite supurme ===
 sweptBelow(float lvl) => not na(lvl) and low < lvl and close > lvl
@@ -167,11 +185,11 @@ sweptAbove(float lvl) => not na(lvl) and high > lvl and close < lvl
 lvlL = sweptBelow(pdl) ? 25 : sweptBelow(asiaLo) ? 20 : sweptBelow(swL) ? 10 : 0
 lvlS = sweptAbove(pdh) ? 25 : sweptAbove(asiaHi) ? 20 : sweptAbove(swH) ? 10 : 0
 
-sScoreL = lvlL + (rvol >= rvolMin ? 20 : 0) + (clv >= 0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcDn ? 10 : 0) + (close < vwapV ? 15 : 0)
-sScoreS = lvlS + (rvol >= rvolMin ? 20 : 0) + (clv <= -0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcUp ? 10 : 0) + (close > vwapV ? 15 : 0)
+sScoreL = math.min(100, (shortCrowd ? 10 : 0) + lvlL + (rvol >= rvolMin ? 20 : 0) + (clv >= 0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcDn ? 10 : 0) + (close < vwapV ? 15 : 0))
+sScoreS = math.min(100, (longCrowd ? 10 : 0) + lvlS + (rvol >= rvolMin ? 20 : 0) + (clv <= -0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcUp ? 10 : 0) + (close > vwapV ? 15 : 0))
 
-sValidL = useSweep and lvlL > 0 and clv >= 0.2 and not (dnTrend and trendReg and htfDn)
-sValidS = useSweep and lvlS > 0 and clv <= -0.2 and not (upTrend and trendReg and htfUp)
+sValidL = useSweep and lvlL > 0 and clv >= 0.2 and not spikeS and not (dnTrend and trendReg and htfDn)
+sValidS = useSweep and lvlS > 0 and clv <= -0.2 and not spikeS and not (upTrend and trendReg and htfUp)
 
 // === Stop mesafeleri ve maliyet ===
 clampD(float d) => math.min(math.max(d, atr * minStopAtr), atr * maxStopAtr)
@@ -254,20 +272,48 @@ if (longSig or shortSig) and dir != 0
     closedR := (realized + remQ2 * (close - entry) * dir - cost) / risk
     closedTxt := "Ters sinyal"
 
-// Gecmis performans (komisyon ve kayma dahil, R cinsinden)
+// Gecmis performans (komisyon ve kayma dahil, R cinsinden). posType burada henuz kapanan islemin tipidir.
 var int nTr = 0
 var int nWin = 0
 var float sumR = 0.0
+var float sumR2 = 0.0
 var float grossW = 0.0
 var float grossL = 0.0
+var float peakR = 0.0
+var float maxDD = 0.0
+var int nT = 0
+var float sumT = 0.0
+var float gwT = 0.0
+var float glT = 0.0
+var int nS = 0
+var float sumS = 0.0
+var float gwS = 0.0
+var float glS = 0.0
 if not na(closedR)
     nTr += 1
     sumR += closedR
+    sumR2 += closedR * closedR
     if closedR > 0
         nWin += 1
         grossW += closedR
     else
         grossL -= closedR
+    peakR := math.max(peakR, sumR)
+    maxDD := math.max(maxDD, peakR - sumR)
+    if posType == 1
+        nT += 1
+        sumT += closedR
+        if closedR > 0
+            gwT += closedR
+        else
+            glT -= closedR
+    else
+        nS += 1
+        sumS += closedR
+        if closedR > 0
+            gwS += closedR
+        else
+            glS -= closedR
     status := closedTxt + " (" + str.tostring(closedR, "#.##") + "R)"
 
 if longSig or shortSig
@@ -306,33 +352,53 @@ plot(act ? tp2 : na, "TP2", color.new(color.lime, 0), 2, plot.style_linebr)
 alertcondition(longSig, "VSP AL", "VSP: AL sinyali")
 alertcondition(shortSig, "VSP SAT", "VSP: SAT sinyali")
 
-// === Panel ===
-var table panel = table.new(position.top_right, 2, 13, bgcolor = color.new(color.black, 20), border_width = 1)
+// === Paneller ===
+var table panel = table.new(position.top_right, 2, 12, bgcolor = color.new(color.black, 20), border_width = 1)
+var table stats = table.new(position.bottom_right, 2, 8, bgcolor = color.new(color.black, 20), border_width = 1)
 
-cell(int r, string k, string v, color c) =>
-    table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
-    table.cell(panel, 1, r, v, text_color = c, text_size = size.small, text_halign = text.align_left)
+cell(table t, int r, string k, string v, color c) =>
+    table.cell(t, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
+    table.cell(t, 1, r, v, text_color = c, text_size = size.small, text_halign = text.align_left)
+
+pfStr(float w, float l) => l > 0 ? str.tostring(w / l, "#.00") : "-"
+
+cGood = color.lime
+cBad = color.red
+cMid = color.gray
 
 if showPanel and barstate.islast
-    cGood = color.lime
-    cBad = color.red
-    cMid = color.gray
     regTxt = trendReg ? (upTrend ? "Trend yukarı" : dnTrend ? "Trend aşağı" : "Trend, yön karışık") : "Yatay / gürültülü"
-    cell(0, "Rejim (ER " + str.tostring(er, "#.00") + ")", regTxt, trendReg ? (upTrend ? cGood : dnTrend ? cBad : cMid) : color.yellow)
-    cell(1, "Üst ZD (" + htf + ")", htfUp ? "Yukarı" : htfDn ? "Aşağı" : "Yatay", htfUp ? cGood : htfDn ? cBad : cMid)
-    cell(2, "BTC", isBtc ? "Bu grafik" : btcOk ? (btcUp ? "Yukarı" : btcDn ? "Aşağı" : "Karışık") : "Veri yok", isBtc ? cMid : btcUp ? cGood : btcDn ? cBad : cMid)
-    cell(3, "Delta (tahmini)", str.tostring(dRatio * 100, "#") + "%", dRatio >= dMin ? cGood : dRatio <= -dMin ? cBad : cMid)
-    cell(4, "OI değişimi", oiOk ? str.tostring(oiCh, "#.##") + "%" : "Veri yok", oiOk ? (oiCh > 0 ? cGood : cBad) : cMid)
-    cell(5, "Göreli hacim", str.tostring(rvol, "#.00") + "x", rvol >= rvolMin ? cGood : cMid)
+    cell(panel, 0, "Rejim (ER " + str.tostring(er, "#.00") + ")", regTxt, trendReg ? (upTrend ? cGood : dnTrend ? cBad : cMid) : color.yellow)
+    cell(panel, 1, "Üst ZD (" + htf + ")", htfUp ? "Yukarı" : htfDn ? "Aşağı" : "Yatay", htfUp ? cGood : htfDn ? cBad : cMid)
+    cell(panel, 2, "BTC", isBtc ? "Bu grafik" : btcOk ? (btcUp ? "Yukarı" : btcDn ? "Aşağı" : "Karışık") : "Veri yok", isBtc ? cMid : btcUp ? cGood : btcDn ? cBad : cMid)
+    cell(panel, 3, "Delta (tahmini)", str.tostring(dRatio * 100, "#") + "%", dRatio >= dMin ? cGood : dRatio <= -dMin ? cBad : cMid)
+    cell(panel, 4, "OI değişimi", oiOk ? str.tostring(oiCh, "#.##") + "%" : "Veri yok", oiOk ? (oiCh > 0 ? cGood : cBad) : cMid)
+    premTxt = premOk ? "z " + str.tostring(premZ, "#.0") + (longCrowd ? ", longlar kalabalık" : shortCrowd ? ", shortlar kalabalık" : ", normal") : "Veri yok"
+    cell(panel, 5, "Prim (kalabalık)", premTxt, longCrowd or shortCrowd ? color.yellow : cMid)
+    cell(panel, 6, "Göreli hacim", str.tostring(rvol, "#.00") + "x", rvol >= rvolMin ? cGood : cMid)
     liveCostR = costPx / dTL
-    cell(6, "Maliyet / risk", str.tostring(liveCostR, "#.00") + "R", liveCostR <= maxCostR ? cGood : cBad)
-    cell(7, "Fonlama", nearFunding ? "Yakın, sinyal yok" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? color.yellow : cMid)
-    cell(8, "Trend skoru L / S", str.tostring(tScoreL) + " / " + str.tostring(tScoreS), tScoreL >= minScore ? cGood : tScoreS >= minScore ? cBad : cMid)
-    cell(9, "Durum", status, dir == 1 ? cGood : dir == -1 ? cBad : color.white)
-    winTxt = nTr > 0 ? str.tostring(nWin * 100.0 / nTr, "#") + "%" : "-"
-    cell(10, "Geçmiş işlem / isabet", str.tostring(nTr) + " / " + winTxt, cMid)
-    pfTxt = grossL > 0 ? str.tostring(grossW / grossL, "#.00") : "-"
-    cell(11, "Net R / PF", str.tostring(sumR, "#.#") + "R / " + pfTxt, sumR > 0 ? cGood : sumR < 0 ? cBad : cMid)
+    cell(panel, 7, "Maliyet / risk", str.tostring(liveCostR, "#.00") + "R", liveCostR <= maxCostR ? cGood : cBad)
+    cell(panel, 8, "Fonlama", nearFunding ? "Yakın, sinyal yok" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? color.yellow : cMid)
+    cell(panel, 9, "Trend skoru L / S", str.tostring(tScoreL) + " / " + str.tostring(tScoreS), tScoreL >= minScore ? cGood : tScoreS >= minScore ? cBad : cMid)
+    cell(panel, 10, "Durum", status, dir == 1 ? cGood : dir == -1 ? cBad : color.white)
     warnTxt = timeframe.period != "1" ? "1 dk grafiğe geçin" : volMa > 0 ? "Yok" : "Hacim verisi yok"
-    cell(12, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : color.yellow)
+    cell(panel, 11, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : color.yellow)
+
+// Guven: islem basina ortalama R'nin t-istatistigi (t >= 2 ve en az 30 islem = istatistiksel olarak anlamli)
+if showStats and barstate.islast
+    meanR = nTr > 0 ? sumR / nTr : 0.0
+    varR = nTr > 1 ? (sumR2 - nTr * meanR * meanR) / (nTr - 1) : 0.0
+    sdR = math.sqrt(math.max(varR, 0.0))
+    tStat = nTr > 1 and sdR > 0 ? meanR / (sdR / math.sqrt(nTr)) : 0.0
+    verdict = nTr < 30 ? "Az veri (<30 işlem)" : tStat >= 2 ? "Anlamlı kenar" : tStat >= 1 ? "Zayıf kanıt" : tStat > -1 ? "Kenar yok" : "Negatif kenar"
+    vCol = nTr < 30 ? color.yellow : tStat >= 2 ? cGood : tStat >= 1 ? color.yellow : tStat > -1 ? cMid : cBad
+    winTxt = nTr > 0 ? str.tostring(nWin * 100.0 / nTr, "#") + "%" : "-"
+    cell(stats, 0, "PERFORMANS", "komisyon ve kayma dahil", color.white)
+    cell(stats, 1, "İşlem / isabet", str.tostring(nTr) + " / " + winTxt, cMid)
+    cell(stats, 2, "Net R / PF", str.tostring(sumR, "#.#") + "R / " + pfStr(grossW, grossL), sumR > 0 ? cGood : sumR < 0 ? cBad : cMid)
+    cell(stats, 3, "Ortalama R / işlem", str.tostring(meanR, "#.###") + "R", meanR > 0 ? cGood : meanR < 0 ? cBad : cMid)
+    cell(stats, 4, "En büyük düşüş", str.tostring(maxDD, "#.#") + "R", cMid)
+    cell(stats, 5, "Güven (t " + str.tostring(tStat, "#.0") + ")", verdict, vCol)
+    cell(stats, 6, "Trend devamı", str.tostring(nT) + " işlem | " + str.tostring(sumT, "#.#") + "R | PF " + pfStr(gwT, glT), sumT > 0 ? cGood : sumT < 0 ? cBad : cMid)
+    cell(stats, 7, "Likidite süpürme", str.tostring(nS) + " işlem | " + str.tostring(sumS, "#.#") + "R | PF " + pfStr(gwS, glS), sumS > 0 ? cGood : sumS < 0 ? cBad : cMid)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir
