@@ -109,7 +109,7 @@ v4.0 bu üç soruna göre yeniden kuruldu.
 ## Dürüst Not
 
 - Hiçbir gösterge kâr garantisi vermez.
-- v3.0 testi bu göstergenin o hâliyle **kenarı olmadığını** gösterdi. v4.0'ın kenarı olup olmadığı henüz bilinmiyor; yeni ekran görüntüleri bunu gösterecek.
+- v3.0 (296 işlem) ve v4.0 (19 işlem) ekran görüntüleri ile 21 aylık BTC testi aynı sonucu veriyor: Sinyallerin **kenarı yok**.
 - Limit emir simülasyonu TradingView mumlarıyla yapılan bir yaklaşımdır. Gerçekte emir kuyruğundaki sıranız dolumu etkiler.
 - Araştırmalar, limit emirlerin en çok fiyat aleyhe giderken dolduğunu söylüyor. Simülasyon bunu kısmen yansıtır.
 - Sinyal sayısı v3.0'a göre belirgin şekilde azalacak. Bu bilinçli bir tercih: Az sayıda işlem, daha düşük maliyet yükü demek.
