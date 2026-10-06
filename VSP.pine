@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulası (VSP) — v1.0
+// Vadeli Scalp Pusulası (VSP) — v1.0.1
 // 1 dakikalık kripto vadeli işlemler için: trend + VWAP + hacim + güç + komisyon filtresi.
 // Sinyaller yalnızca mum kapanışında oluşur, yeniden çizim (repaint) yapmaz.
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
@@ -140,11 +140,9 @@ plotshape(shortSig, "SAT", shape.labeldown, location.abovebar, color.new(color.r
 alertcondition(longSig, "VSP AL", "VSP: AL sinyali")
 alertcondition(shortSig, "VSP SAT", "VSP: SAT sinyali")
 if longSig or shortSig
-    alert((longSig ? "AL " : "SAT ") + syminfo.ticker
-         + " | Giriş " + str.tostring(entry, format.mintick)
-         + " | Stop " + str.tostring(sl, format.mintick)
-         + " | TP1 " + str.tostring(tp1, format.mintick)
-         + " | TP2 " + str.tostring(tp2, format.mintick), alert.freq_once_per_bar_close)
+    yon = longSig ? "AL " : "SAT "
+    msg = yon + syminfo.ticker + " | Giriş " + str.tostring(entry, format.mintick) + " | Stop " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick)
+    alert(msg, alert.freq_once_per_bar_close)
 
 // ───────── Panel ─────────
 var table panel = table.new(position.top_right, 2, 8, bgcolor = color.new(color.black, 20), border_width = 1)
