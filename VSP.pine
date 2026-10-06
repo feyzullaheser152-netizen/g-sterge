@@ -1,10 +1,10 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.0.0 | 1 dakika islem kokpiti
+// Vadeli Scalp Pusulasi (VSP) - v5.1.0 | 1 dakika islem kokpiti
 // Gosterge AL/SAT vermez: nereden alip satacaginiza siz karar verirsiniz. Gosterge karar icin bilgi verir:
 //   1) Bu islem komisyonu cikarabilir mi?  2) Piyasa su an uygun mu?  3) Hangi yon kovalanmamali?
-//   4) Kac birim acmaliyim, stop nerede?
+//   4) Kac birim acmaliyim, stop nerede?  5) Fiyat ne kadar oynar, stopum gurultuyle vurulur mu, kac isabet gerekir?
 // Tek kanitli etki: saldirgan akisla gelen 15 dk sert hareketten sonra fiyat 5-15 dk icinde hafifce geri doner.
-indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_lines_count = 10, max_labels_count = 10)
+indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_lines_count = 10, max_labels_count = 10, max_boxes_count = 5)
 
 // === Girdiler ===
 grpA = "Hesap ve risk"
@@ -15,6 +15,8 @@ stopLook = input.int(5, "Dip/tepe için mum sayısı", minval = 1, group = grpA,
 stopBuf  = input.float(0.2, "Stop tamponu (ATR x)", step = 0.1, group = grpA, display = display.none)
 stopAtr  = input.float(1.5, "ATR katı stop (ATR x)", step = 0.1, group = grpA, display = display.none)
 minStop  = input.float(0.6, "En dar stop (ATR x)", step = 0.1, group = grpA, display = display.none)
+tpR      = input.float(1.5, "Planlanan hedef (R)", minval = 0.2, step = 0.1, group = grpA, display = display.none)
+holdMin  = input.int(15, "Planlanan tutma süresi (dk)", minval = 1, maxval = 240, group = grpA, display = display.none)
 
 grpE = "Emir ve maliyet"
 entryMode = input.string("Limit (maker)", "Giriş emri", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
@@ -37,6 +39,7 @@ grpV = "Görünüm"
 showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, display = display.none)
 showStops  = input.bool(true, "Long / short stop çizgileri", group = grpV, display = display.none)
 showBg     = input.bool(true, "Kovalama uyarısında arka plan", group = grpV, display = display.none)
+showBox    = input.bool(true, "Beklenen hareket kutusu (%80)", group = grpV, display = display.none)
 panelPos   = input.string("Sağ üst", "Panel konumu", options = ["Sağ üst", "Sağ alt", "Sol üst", "Sol alt"], group = grpV, display = display.none)
 
 isLimit = entryMode == "Limit (maker)"
@@ -117,6 +120,28 @@ costRL = distL > 0 ? costPx / distL : na
 costRS = distS > 0 ? costPx / distS : na
 costMin = math.min(nz(costRL, 9), nz(costRS, 9))
 
+// Beklenen hareket ve gurultu: 1 dk getirinin 30 mumluk EWMA varyansi (22 Binance paritesinde kalibre edildi)
+// N dk'lik |getiri| / (sigma x kok N) dagilimi: %50 dilim 0.61, %80 dilim 1.23 (2025 ve 2026'da tutarli)
+ewVar = ta.ema(nz(r1 * r1), 30)
+sigN  = math.sqrt(ewVar * holdMin)
+em50  = 0.61 * sigN
+em80  = 1.23 * sigN
+
+// Stopun N dk icinde gurultuyle vurulma olasiligi (%): mesafe k = log mesafe / sigN; gercek veriden tablo
+hitProb(float k) =>
+    k <= 0 ? 100.0 : k < 0.5 ? 100.0 - 42.5 * k / 0.5 : k < 1.0 ? 57.5 - 28.7 * (k - 0.5) / 0.5 : k < 1.5 ? 28.8 - 15.3 * (k - 1.0) / 0.5 : k < 2.0 ? 13.5 - 7.1 * (k - 1.5) / 0.5 : k < 2.5 ? 6.4 - 3.2 * (k - 2.0) / 0.5 : k < 3.0 ? 3.2 - 1.4 * (k - 2.5) / 0.5 : 1.8 * math.exp(-1.2 * (k - 3.0))
+hitL = sigN > 0 and distL > 0 ? hitProb(math.log(close / stopL) / sigN) : na
+hitS = sigN > 0 and distS > 0 ? hitProb(math.log(stopS / close) / sigN) : na
+
+// Basa bas isabet: kazanc = tpR - (giris + maker TP komisyonu), kayip = 1 + (giris + taker stop komisyonu), R cinsinden
+beRate(float dist) =>
+    cWin = close * (entryX + makerFee) / 100 / dist
+    cLoss = close * (entryX + takerX) / 100 / dist
+    (1 + cLoss) / (tpR - cWin + 1 + cLoss) * 100
+beL = distL > 0 ? beRate(distL) : na
+beS = distS > 0 ? beRate(distS) : na
+randWin = 100 / (1 + tpR)
+
 // Pozisyon buyuklugu: stopta kaybedilecek tutar (fiyat farki + komisyon) = bakiye x risk %
 riskAmt = balance * riskPct / 100
 qtyL = riskAmt / (distL + costPx)
@@ -142,6 +167,11 @@ plot(showLevels ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, p
 plot(showLevels ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr)
 bgcolor(showBg and (warnLong or warnShort) ? color.new(color.orange, 88) : na, title = "Kovalama uyarısı")
 
+var box emBox = na
+if showBox and barstate.islast
+    box.delete(emBox)
+    emBox := box.new(bar_index, close * math.exp(em80), bar_index + holdMin, close * math.exp(-em80), border_color = color.new(color.blue, 50), bgcolor = color.new(color.blue, 90), text = "%80 aralık (" + str.tostring(holdMin) + " dk)", text_color = color.new(color.blue, 20), text_size = size.tiny, text_valign = text.align_top)
+
 var line lnL = na
 var line lnS = na
 var label lbL = na
@@ -163,7 +193,7 @@ alertcondition(isRed[1] and not isRed, "VSP: Koşullar düzeldi", "VSP: İşlem 
 
 // === Panel ===
 pos = panelPos == "Sağ üst" ? position.top_right : panelPos == "Sağ alt" ? position.bottom_right : panelPos == "Sol üst" ? position.top_left : position.bottom_left
-var table panel = table.new(pos, 2, 12, bgcolor = color.new(color.black, 15), border_width = 1)
+var table panel = table.new(pos, 2, 15, bgcolor = color.new(color.black, 15), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
     table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
@@ -193,4 +223,8 @@ if barstate.islast
     cell(9, "SHORT: stop / miktar", str.tostring(stopS, format.mintick) + " / " + fmtQty(qtyS), color.white)
     cell(10, "SHORT: büyüklük / kaldıraç", str.tostring(notS, "0") + " USDT / en az " + str.tostring(math.ceil(notS / balance)) + "x", color.white)
     cell(11, "Stopta kayıp (komisyon dahil)", str.tostring(riskAmt, "0.00") + " USDT (%" + str.tostring(riskPct, "0.0#") + ")", cMid)
+    cell(12, "Beklenen hareket (" + str.tostring(holdMin) + " dk)", "%50: ±%" + str.tostring(em50 * 100, "0.00") + " | %80: ±%" + str.tostring(em80 * 100, "0.00"), cMid)
+    hitMax = math.max(nz(hitL), nz(hitS))
+    cell(13, "Stop gürültüyle vurulur mu (" + str.tostring(holdMin) + " dk)", "L %" + str.tostring(nz(hitL), "0") + " | S %" + str.tostring(nz(hitS), "0"), hitMax >= 50 ? cBad : hitMax >= 25 ? cWarn : cGood)
+    cell(14, "Başa baş isabet (hedef " + str.tostring(tpR, "0.0#") + "R)", "L %" + str.tostring(nz(beL), "0") + " | S %" + str.tostring(nz(beS), "0") + " (rastgele ≈ %" + str.tostring(randWin, "0") + ")", math.min(nz(beL, 100), nz(beS, 100)) - randWin <= 3 ? cGood : cWarn)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir

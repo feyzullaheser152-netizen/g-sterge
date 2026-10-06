@@ -116,3 +116,28 @@ Limit emirler, kenarın bulunduğu anlarda değil, fiyat aleyhe giderken doluyor
 - Bu sonuç, göstergedeki "kovalamayın" uyarısının dayanağıdır.
 
 **Karar:** Göstergeden AL/SAT sinyalleri kaldırıldı (v5.0). Kullanıcı kararı kendisi verir; gösterge maliyet, koşul, akış ve pozisyon büyüklüğü bilgisi sunar.
+
+## 5. Oynaklık kalibrasyonu (v5.1 için; `volcal.py`, `bracket.py`)
+
+**Beklenen hareket:** Getiri oranı = |15 dk getiri| / (öngörülen σ × √15).
+
+| Model | Yıl | %50 dilim | %80 dilim | %95 dilim |
+|---|---|---|---|---|
+| Kısa EWMA (30 mum) | 2025 | 0,629 | 1,246 | 2,106 |
+| Kısa EWMA (30 mum) | 2026 | 0,588 | 1,205 | 2,129 |
+
+Göstergede 0,61 ve 1,23 katsayıları kullanılır. HAR benzeri karışım ve saat etkisi eklemek tahmin gücünü artırmadı.
+
+**Stopun gürültüyle vurulma oranı (%):** k = stop mesafesi / (σ × √N).
+
+| k | 0,5 | 1,0 | 1,5 | 2,0 | 2,5 | 3,0 |
+|---|---|---|---|---|---|---|
+| Gerçek (5/15/30 dk ve iki yıl ortalaması) | 57,5 | 28,8 | 13,5 | 6,4 | 3,2 | 1,8 |
+| Brown hareketi formülü | 61,7 | 31,7 | 13,4 | 4,6 | 1,2 | 0,3 |
+
+**Rastgele girişte hedefin stoptan önce gelme oranı (stop = 1σ×√15):**
+
+| Hedef | 1R | 1,5R | 2R | 3R |
+|---|---|---|---|---|
+| Gerçek | %49 | %39 | %31,5 | %21 |
+| Teorik 1/(1+R) | %50 | %40 | %33 | %25 |
