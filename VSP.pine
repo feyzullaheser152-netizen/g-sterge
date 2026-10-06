@@ -1,45 +1,69 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v1.0.2
-// 1 dakikalik kripto vadeli islemler icin: trend + VWAP + hacim + guc + komisyon filtresi.
+// Vadeli Scalp Pusulasi (VSP) - v2.0.0
+// 1 dakikalik kripto vadeli islemler icin iki kurulum:
+//   1) Trend devami: ust ZD + VWAP + EMA trendinde geri cekilme sonrasi donus
+//   2) Likidite supurme: onceki gun / Asya / salinim seviyesinin altina-ustune igne atip geri kapanis
+// Her sinyal 0-100 skorla puanlanir. Komisyon + kayma riskin belirli bir oranini asarsa sinyal verilmez.
 // Sinyaller yalnizca mum kapanisinda olusur, yeniden cizim (repaint) yapmaz.
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
 
 // === Girdiler ===
+grpS = "Sinyal"
+minScore  = input.int(60, "En düşük skor (0-100)", minval = 0, maxval = 100, group = grpS)
+useTrend  = input.bool(true, "Trend devamı sinyalleri", group = grpS)
+useSweep  = input.bool(true, "Likidite süpürme sinyalleri", group = grpS)
+cooldown  = input.int(5, "Sinyaller arası en az mum", minval = 0, group = grpS)
+fundBlock = input.int(3, "Fonlama saatine ± dk sinyal verme", minval = 0, group = grpS)
+fundHours = input.int(8, "Fonlama aralığı (saat)", options = [1, 2, 4, 8], group = grpS)
+
 grpT = "Trend"
 emaFastLen = input.int(9, "Hızlı EMA", minval = 1, group = grpT)
 emaSlowLen = input.int(21, "Yavaş EMA", minval = 1, group = grpT)
 htf        = input.timeframe("15", "Üst zaman dilimi", group = grpT)
 htfLen     = input.int(50, "Üst ZD EMA", minval = 1, group = grpT)
+btcSym     = input.symbol("BINANCE:BTCUSDT.P", "Lider sembol (altcoinler için)", group = grpT)
 
 grpF = "Filtreler"
-adxLen   = input.int(14, "ADX uzunluğu", minval = 1, group = grpF)
-adxMin   = input.float(20, "En düşük ADX", group = grpF)
-rvolLen  = input.int(20, "Hacim ortalaması", minval = 1, group = grpF)
-rvolMin  = input.float(1.3, "En düşük göreli hacim", step = 0.1, group = grpF)
-rsiLen   = input.int(14, "RSI uzunluğu", minval = 1, group = grpF)
-rsiMaxL  = input.float(72, "Alışta en yüksek RSI", group = grpF)
-rsiMinS  = input.float(28, "Satışta en düşük RSI", group = grpF)
-cooldown = input.int(5, "Sinyaller arası en az mum", minval = 0, group = grpF)
+erLen   = input.int(20, "Verimlilik oranı (ER) uzunluğu", minval = 2, group = grpF)
+erMin   = input.float(0.25, "Trend için en düşük ER", step = 0.05, group = grpF)
+adxLen  = input.int(14, "ADX uzunluğu", minval = 1, group = grpF)
+adxMin  = input.float(20, "En düşük ADX", group = grpF)
+rvolLen = input.int(20, "Hacim ortalaması", minval = 1, group = grpF)
+rvolMin = input.float(1.3, "En düşük göreli hacim", step = 0.1, group = grpF)
+dLen    = input.int(3, "Delta penceresi (mum)", minval = 1, group = grpF)
+dMin    = input.float(0.10, "En düşük delta oranı", step = 0.05, group = grpF)
+oiLen   = input.int(5, "OI değişim penceresi (mum)", minval = 1, group = grpF)
+rsiLen  = input.int(14, "RSI uzunluğu", minval = 1, group = grpF)
+rsiMaxL = input.float(72, "Alışta en yüksek RSI", group = grpF)
+rsiMinS = input.float(28, "Satışta en düşük RSI", group = grpF)
+swLeft  = input.int(10, "Salınım noktası sol mum", minval = 1, group = grpF)
+swRight = input.int(3, "Salınım noktası sağ mum", minval = 1, group = grpF)
 
-grpR = "Risk"
-atrLen   = input.int(14, "ATR uzunluğu", minval = 1, group = grpR)
-slMult   = input.float(1.5, "Stop (ATR x)", step = 0.1, group = grpR)
-tp1R     = input.float(1.0, "TP1 (R)", step = 0.1, group = grpR)
-tp2R     = input.float(2.0, "TP2 (R)", step = 0.1, group = grpR)
-feePct   = input.float(0.10, "Gidiş-dönüş komisyon %", step = 0.01, group = grpR)
-feeCover = input.float(2.0, "TP2 / komisyon en az oranı", step = 0.5, group = grpR)
+grpR = "Risk ve maliyet"
+atrLen     = input.int(14, "ATR uzunluğu", minval = 1, group = grpR)
+stopLook   = input.int(5, "Stop için geriye bakış (mum)", minval = 1, group = grpR)
+stopBuf    = input.float(0.2, "Stop tamponu (ATR x)", step = 0.1, group = grpR)
+minStopAtr = input.float(0.6, "En dar stop (ATR x)", step = 0.1, group = grpR)
+maxStopAtr = input.float(2.5, "En geniş stop (ATR x)", step = 0.1, group = grpR)
+tp1R       = input.float(1.0, "TP1 (R)", step = 0.1, group = grpR)
+tp2R       = input.float(2.0, "TP2 (R)", step = 0.1, group = grpR)
+partQ      = input.float(50, "TP1'de kapatılan %", minval = 0, maxval = 100, step = 10, group = grpR) / 100
+timeStop   = input.int(20, "Zaman stopu (mum, TP1 öncesi)", minval = 1, group = grpR)
+feeSide    = input.float(0.05, "Tek yön komisyon %", step = 0.005, group = grpR)
+slipSide   = input.float(0.01, "Tek yön kayma %", step = 0.005, group = grpR)
+maxCostR   = input.float(0.30, "En yüksek maliyet / risk (R)", step = 0.05, group = grpR)
 
 grpV = "Görünüm"
-showBands  = input.bool(true, "VWAP bantları", group = grpV)
-showLevels = input.bool(true, "Giriş/Stop/TP seviyeleri", group = grpV)
-showPanel  = input.bool(true, "Panel", group = grpV)
+showBands = input.bool(true, "VWAP bantları", group = grpV)
+showLiq   = input.bool(true, "Likidite seviyeleri", group = grpV)
+showPos   = input.bool(true, "Giriş/Stop/TP seviyeleri", group = grpV)
+showPanel = input.bool(true, "Panel", group = grpV)
 
-// === Hesaplar ===
+// === Temel hesaplar ve cizimler ===
 emaF = ta.ema(close, emaFastLen)
 emaS = ta.ema(close, emaSlowLen)
 [vwapV, vwapU, vwapL] = ta.vwap(hlc3, timeframe.change("D"), 2.0)
 
-// Temel cizimler (en basta)
 pF = plot(emaF, "Hızlı EMA", color.new(color.teal, 0), 1)
 pS = plot(emaS, "Yavaş EMA", color.new(color.maroon, 0), 1)
 fill(pF, pS, emaF > emaS ? color.new(color.teal, 85) : color.new(color.maroon, 85), title = "EMA bulutu")
@@ -53,99 +77,237 @@ htfClose = request.security(syminfo.tickerid, htf, close[1], lookahead = barmerg
 htfUp = htfClose > htfEma
 htfDn = htfClose < htfEma
 
+// BTC liderligi (altcoinler BTC ile ayni dakikada hareket eder)
+isBtc = syminfo.basecurrency == "BTC"
+[btcC, btcE, btcV] = request.security(btcSym, timeframe.period, [close, ta.ema(close, emaSlowLen), ta.vwap(hlc3)], ignore_invalid_symbol = true)
+btcOk = not na(btcC) and not na(btcE) and not na(btcV)
+btcUp = btcOk and btcC > btcE and btcC > btcV
+btcDn = btcOk and btcC < btcE and btcC < btcV
+
+// Acik pozisyon (OI): yalnizca vadeli (.P) grafiklerde veri gelir
+oiSym = syminfo.prefix + ":" + syminfo.ticker + "_OI"
+oi = request.security(oiSym, timeframe.period, close, ignore_invalid_symbol = true)
+oiCh = not na(oi) and not na(oi[oiLen]) and oi[oiLen] != 0 ? (oi - oi[oiLen]) / oi[oiLen] * 100 : na
+oiOk = not na(oiCh)
+
+// Likidite seviyeleri: onceki gun, Asya seansi (00-08 UTC), son salinim noktalari
+pdh = request.security(syminfo.tickerid, "D", high[1], lookahead = barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], lookahead = barmerge.lookahead_on)
+
+newDay = timeframe.change("D")
+inAsia = not na(time(timeframe.period, "0000-0800", "UTC"))
+var float asiaHT = na
+var float asiaLT = na
+if newDay
+    asiaHT := high
+    asiaLT := low
+else if inAsia
+    asiaHT := math.max(nz(asiaHT, high), high)
+    asiaLT := math.min(nz(asiaLT, low), low)
+asiaHi = not inAsia ? asiaHT : na
+asiaLo = not inAsia ? asiaLT : na
+
+ph = ta.pivothigh(high, swLeft, swRight)
+pl = ta.pivotlow(low, swLeft, swRight)
+var float swH = na
+var float swL = na
+if not na(ph)
+    swH := ph
+if not na(pl)
+    swL := pl
+
+plot(showLiq ? pdh : na, "Önceki gün yüksek", color.new(color.gray, 20), 1, plot.style_linebr)
+plot(showLiq ? pdl : na, "Önceki gün düşük", color.new(color.gray, 20), 1, plot.style_linebr)
+plot(showLiq ? asiaHi : na, "Asya yüksek", color.new(color.purple, 30), 1, plot.style_linebr)
+plot(showLiq ? asiaLo : na, "Asya düşük", color.new(color.purple, 30), 1, plot.style_linebr)
+
+// Guc, hacim, delta
 [diP, diM, adx] = ta.dmi(adxLen, adxLen)
 rsi   = ta.rsi(close, rsiLen)
 atr   = ta.atr(atrLen)
 volMa = ta.sma(volume, rvolLen)
 rvol  = volMa > 0 ? volume / volMa : 0.0
 
-slDist = atr * slMult
-tp2Pct = slDist * tp2R / close * 100
-feeOk  = tp2Pct >= feePct * feeCover
+// Kaufman verimlilik orani: 0 = gurultu, 1 = dumduz hareket
+noise = math.sum(math.abs(close - close[1]), erLen)
+er    = noise > 0 ? math.abs(close - close[erLen]) / noise : 0.0
 
-upTrend = emaF > emaS and close > vwapV and htfUp
-dnTrend = emaF < emaS and close < vwapV and htfDn
-strong  = adx >= adxMin
-volOk   = rvol >= rvolMin
+// Tahmini delta: kapanisin mum icindeki konumuna gore alici/satici hacmi
+rng    = high - low
+clv    = rng > 0 ? ((close - low) - (high - close)) / rng : 0.0
+dlt    = volume * clv
+dSumV  = math.sum(volume, dLen)
+dRatio = dSumV > 0 ? math.sum(dlt, dLen) / dSumV : 0.0
 
-// Tetik: trend yonunde hizli EMA'ya geri cekilip donus
+// Zaman: likit saatler ve fonlama penceresi (UTC)
+hUtc        = hour(time, "UTC")
+liquidHour  = hUtc >= 7 and hUtc < 21
+minsSince   = (hUtc % fundHours) * 60 + minute(time, "UTC")
+fundPeriod  = fundHours * 60
+nearFunding = fundBlock > 0 and (minsSince < fundBlock or minsSince >= fundPeriod - fundBlock)
+
+// === Kurulum 1: Trend devami ===
+upTrend  = emaF > emaS and close > vwapV
+dnTrend  = emaF < emaS and close < vwapV
+trendReg = er >= erMin
+
 longTrig  = ta.crossover(close, emaF) or (low <= emaF and close > emaF and close > open)
 shortTrig = ta.crossunder(close, emaF) or (high >= emaF and close < emaF and close < open)
 
-longCond  = upTrend and longTrig and strong and volOk and feeOk and rsi < rsiMaxL and close < vwapU
-shortCond = dnTrend and shortTrig and strong and volOk and feeOk and rsi > rsiMinS and close > vwapL
+tScoreL = (htfUp ? 20 : 0) + (isBtc or btcUp ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diP > diM ? 10 : 0) + (dRatio >= dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
+tScoreS = (htfDn ? 20 : 0) + (isBtc or btcDn ? 15 : btcOk ? 0 : 8) + (trendReg ? 15 : 0) + (adx >= adxMin and diM > diP ? 10 : 0) + (dRatio <= -dMin ? 15 : 0) + (oiOk ? (oiCh > 0 ? 10 : 0) : 5) + (rvol >= rvolMin ? 10 : 0) + (liquidHour ? 5 : 0)
+
+tValidL = useTrend and upTrend and longTrig and rsi < rsiMaxL and close < vwapU
+tValidS = useTrend and dnTrend and shortTrig and rsi > rsiMinS and close > vwapL
+
+// === Kurulum 2: Likidite supurme ===
+sweptBelow(float lvl) => not na(lvl) and low < lvl and close > lvl
+sweptAbove(float lvl) => not na(lvl) and high > lvl and close < lvl
+
+lvlL = sweptBelow(pdl) ? 25 : sweptBelow(asiaLo) ? 20 : sweptBelow(swL) ? 10 : 0
+lvlS = sweptAbove(pdh) ? 25 : sweptAbove(asiaHi) ? 20 : sweptAbove(swH) ? 10 : 0
+
+sScoreL = lvlL + (rvol >= rvolMin ? 20 : 0) + (clv >= 0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcDn ? 10 : 0) + (close < vwapV ? 15 : 0)
+sScoreS = lvlS + (rvol >= rvolMin ? 20 : 0) + (clv <= -0.5 ? 15 : 0) + (oiOk ? (oiCh < 0 ? 15 : 0) : 7) + (isBtc or not btcUp ? 10 : 0) + (close > vwapV ? 15 : 0)
+
+sValidL = useSweep and lvlL > 0 and clv >= 0.2 and not (dnTrend and trendReg and htfDn)
+sValidS = useSweep and lvlS > 0 and clv <= -0.2 and not (upTrend and trendReg and htfUp)
+
+// === Stop mesafeleri ve maliyet ===
+clampD(float d) => math.min(math.max(d, atr * minStopAtr), atr * maxStopAtr)
+
+lowN  = ta.lowest(low, stopLook)
+highN = ta.highest(high, stopLook)
+dTL = clampD(close - (lowN - atr * stopBuf))
+dTS = clampD((highN + atr * stopBuf) - close)
+dSL = clampD(close - (low - atr * stopBuf))
+dSS = clampD((high + atr * stopBuf) - close)
+
+costPct = 2 * (feeSide + slipSide)
+costPx  = close * costPct / 100
+
+okTL = tValidL and tScoreL >= minScore and costPx / dTL <= maxCostR
+okSL = sValidL and sScoreL >= minScore and costPx / dSL <= maxCostR
+okTS = tValidS and tScoreS >= minScore and costPx / dTS <= maxCostR
+okSS = sValidS and sScoreS >= minScore and costPx / dSS <= maxCostR
+
+longType  = okTL and (not okSL or tScoreL >= sScoreL) ? 1 : okSL ? 2 : 0
+shortType = okTS and (not okSS or tScoreS >= sScoreS) ? 1 : okSS ? 2 : 0
+longSc    = longType == 1 ? tScoreL : longType == 2 ? sScoreL : 0
+shortSc   = shortType == 1 ? tScoreS : shortType == 2 ? sScoreS : 0
 
 // === Pozisyon takibi ===
 var int dir = 0
+var int posType = 0
 var float entry = na
 var float sl = na
 var float tp1 = na
 var float tp2 = na
+var float risk = na
+var float cost = na
+var float realized = 0.0
 var bool tp1Hit = false
 var int entryBar = na
 var int lastSig = na
 var string status = "Bekle"
 
-// Acik pozisyonun sonucu (giris mumundan sonra)
+float closedR = na
+string closedTxt = ""
+
+// Acik pozisyonun sonucu (giris mumundan sonra). Ayni mumda stop ve hedef varsa once stop sayilir.
 if dir != 0 and bar_index > entryBar
-    if dir == 1
-        if low <= sl
-            status := tp1Hit ? "Başa baş çıkış" : "Stop"
-            dir := 0
-        else if high >= tp2
-            status := "TP2 alındı"
-            dir := 0
-        else if not tp1Hit and high >= tp1
-            tp1Hit := true
-            sl := entry
-            status := "TP1 alındı, stop girişte"
+    hitSL = dir == 1 ? low <= sl : high >= sl
+    hitT1 = dir == 1 ? high >= tp1 : low <= tp1
+    hitT2 = dir == 1 ? high >= tp2 : low <= tp2
+    remQ  = tp1Hit ? 1.0 - partQ : 1.0
+    held  = bar_index - entryBar
+    if hitSL
+        closedR := (realized + remQ * (sl - entry) * dir - cost) / risk
+        closedTxt := tp1Hit ? "Başa baş" : "Stop"
+    else if hitT2
+        r1 = tp1Hit ? realized : partQ * (tp1 - entry) * dir
+        closedR := (r1 + (1.0 - partQ) * (tp2 - entry) * dir - cost) / risk
+        closedTxt := "TP2"
     else
-        if high >= sl
-            status := tp1Hit ? "Başa baş çıkış" : "Stop"
-            dir := 0
-        else if low <= tp2
-            status := "TP2 alındı"
-            dir := 0
-        else if not tp1Hit and low <= tp1
+        if hitT1 and not tp1Hit
             tp1Hit := true
+            realized := partQ * (tp1 - entry) * dir
             sl := entry
             status := "TP1 alındı, stop girişte"
+        if tp1Hit and partQ >= 1.0
+            closedR := (realized - cost) / risk
+            closedTxt := "TP1"
+        else if (not tp1Hit and held >= timeStop) or held >= timeStop * 3
+            closedR := (realized + (tp1Hit ? 1.0 - partQ : 1.0) * (close - entry) * dir - cost) / risk
+            closedTxt := "Zaman stopu"
+    if not na(closedR)
+        dir := 0
 
 canSig   = na(lastSig) or bar_index - lastSig > cooldown
-longSig  = barstate.isconfirmed and canSig and longCond and dir != 1
-shortSig = barstate.isconfirmed and canSig and shortCond and dir != -1
+gate     = barstate.isconfirmed and canSig and not nearFunding and volMa > 0
+longSig  = gate and longType > 0 and dir != 1 and longSc > shortSc
+shortSig = gate and shortType > 0 and dir != -1 and shortSc > longSc
+
+// Ters sinyal acik pozisyonu kapatir
+if (longSig or shortSig) and dir != 0
+    remQ2 = tp1Hit ? 1.0 - partQ : 1.0
+    closedR := (realized + remQ2 * (close - entry) * dir - cost) / risk
+    closedTxt := "Ters sinyal"
+
+// Gecmis performans (komisyon ve kayma dahil, R cinsinden)
+var int nTr = 0
+var int nWin = 0
+var float sumR = 0.0
+var float grossW = 0.0
+var float grossL = 0.0
+if not na(closedR)
+    nTr += 1
+    sumR += closedR
+    if closedR > 0
+        nWin += 1
+        grossW += closedR
+    else
+        grossL -= closedR
+    status := closedTxt + " (" + str.tostring(closedR, "#.##") + "R)"
 
 if longSig or shortSig
-    dir := longSig ? 1 : -1
+    d = longSig ? 1 : -1
+    typ = longSig ? longType : shortType
+    sc = longSig ? longSc : shortSc
+    dist = longSig ? (typ == 1 ? dTL : dSL) : (typ == 1 ? dTS : dSS)
+    dir := d
+    posType := typ
     entry := close
-    sl := close - dir * slDist
-    tp1 := close + dir * slDist * tp1R
-    tp2 := close + dir * slDist * tp2R
+    sl := close - d * dist
+    risk := dist
+    tp1 := close + d * dist * tp1R
+    tp2 := close + d * dist * tp2R
+    cost := costPx
+    realized := 0.0
     tp1Hit := false
     entryBar := bar_index
     lastSig := bar_index
-    status := longSig ? "LONG açık" : "SHORT açık"
+    typTxt = typ == 1 ? "Trend devamı" : "Likidite süpürme"
+    status := (longSig ? "LONG" : "SHORT") + " açık, " + typTxt
+    col = longSig ? (typ == 1 ? color.green : color.teal) : (typ == 1 ? color.red : color.orange)
+    tt = typTxt + "\nSkor: " + str.tostring(sc) + "\nGiriş: " + str.tostring(entry, format.mintick) + "\nStop: " + str.tostring(sl, format.mintick) + "\nTP1: " + str.tostring(tp1, format.mintick) + "\nTP2: " + str.tostring(tp2, format.mintick) + "\nMaliyet: " + str.tostring(cost / risk, "#.##") + "R"
+    label.new(bar_index, close, (longSig ? "AL " : "SAT ") + str.tostring(sc), yloc = longSig ? yloc.belowbar : yloc.abovebar, style = longSig ? label.style_label_up : label.style_label_down, color = col, textcolor = color.white, size = size.small, tooltip = tt)
+    msg = (longSig ? "AL " : "SAT ") + syminfo.ticker + " | " + typTxt + " | Skor " + str.tostring(sc) + " | Giriş " + str.tostring(entry, format.mintick) + " | Stop " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick)
+    alert(msg, alert.freq_once_per_bar_close)
 
-// === Seviyeler ve sinyaller ===
-act = showLevels and dir != 0
+// === Seviye cizimleri ===
+act = showPos and dir != 0
 plot(act ? entry : na, "Giriş", color.new(color.gray, 0), 1, plot.style_linebr)
 plot(act ? sl : na, "Stop", color.new(color.red, 0), 2, plot.style_linebr)
 plot(act ? tp1 : na, "TP1", color.new(color.lime, 30), 1, plot.style_linebr)
 plot(act ? tp2 : na, "TP2", color.new(color.lime, 0), 2, plot.style_linebr)
 
-plotshape(longSig, "AL", shape.labelup, location.belowbar, color.new(color.green, 0), text = "AL", textcolor = color.white, size = size.small)
-plotshape(shortSig, "SAT", shape.labeldown, location.abovebar, color.new(color.red, 0), text = "SAT", textcolor = color.white, size = size.small)
-
 // === Alarmlar ===
 alertcondition(longSig, "VSP AL", "VSP: AL sinyali")
 alertcondition(shortSig, "VSP SAT", "VSP: SAT sinyali")
-if longSig or shortSig
-    yon = longSig ? "AL " : "SAT "
-    msg = yon + syminfo.ticker + " | Giriş " + str.tostring(entry, format.mintick) + " | Stop " + str.tostring(sl, format.mintick) + " | TP1 " + str.tostring(tp1, format.mintick) + " | TP2 " + str.tostring(tp2, format.mintick)
-    alert(msg, alert.freq_once_per_bar_close)
 
 // === Panel ===
-var table panel = table.new(position.top_right, 2, 8, bgcolor = color.new(color.black, 20), border_width = 1)
+var table panel = table.new(position.top_right, 2, 13, bgcolor = color.new(color.black, 20), border_width = 1)
 
 cell(int r, string k, string v, color c) =>
     table.cell(panel, 0, r, k, text_color = color.silver, text_size = size.small, text_halign = text.align_left)
@@ -155,12 +317,22 @@ if showPanel and barstate.islast
     cGood = color.lime
     cBad = color.red
     cMid = color.gray
-    cell(0, "Üst ZD (" + htf + ")", htfUp ? "Yukarı" : htfDn ? "Aşağı" : "Yatay", htfUp ? cGood : htfDn ? cBad : cMid)
-    cell(1, "1 dk trend", upTrend ? "Yukarı" : dnTrend ? "Aşağı" : "Karışık", upTrend ? cGood : dnTrend ? cBad : cMid)
-    cell(2, "VWAP", close > vwapV ? "Üstünde" : "Altında", close > vwapV ? cGood : cBad)
-    cell(3, "ADX", str.tostring(adx, "#.0"), strong ? cGood : cMid)
-    cell(4, "Göreli hacim", str.tostring(rvol, "#.00") + "x", volOk ? cGood : cMid)
-    cell(5, "TP2 / komisyon", str.tostring(tp2Pct / feePct, "#.0") + "x", feeOk ? cGood : cBad)
-    cell(6, "Durum", status, dir == 1 ? cGood : dir == -1 ? cBad : color.white)
-    cell(7, "Uyarı", timeframe.period == "1" ? (volMa > 0 ? "Yok" : "Hacim verisi yok") : "1 dk grafiğe geçin", timeframe.period == "1" and volMa > 0 ? cMid : color.yellow)
+    regTxt = trendReg ? (upTrend ? "Trend yukarı" : dnTrend ? "Trend aşağı" : "Trend, yön karışık") : "Yatay / gürültülü"
+    cell(0, "Rejim (ER " + str.tostring(er, "#.00") + ")", regTxt, trendReg ? (upTrend ? cGood : dnTrend ? cBad : cMid) : color.yellow)
+    cell(1, "Üst ZD (" + htf + ")", htfUp ? "Yukarı" : htfDn ? "Aşağı" : "Yatay", htfUp ? cGood : htfDn ? cBad : cMid)
+    cell(2, "BTC", isBtc ? "Bu grafik" : btcOk ? (btcUp ? "Yukarı" : btcDn ? "Aşağı" : "Karışık") : "Veri yok", isBtc ? cMid : btcUp ? cGood : btcDn ? cBad : cMid)
+    cell(3, "Delta (tahmini)", str.tostring(dRatio * 100, "#") + "%", dRatio >= dMin ? cGood : dRatio <= -dMin ? cBad : cMid)
+    cell(4, "OI değişimi", oiOk ? str.tostring(oiCh, "#.##") + "%" : "Veri yok", oiOk ? (oiCh > 0 ? cGood : cBad) : cMid)
+    cell(5, "Göreli hacim", str.tostring(rvol, "#.00") + "x", rvol >= rvolMin ? cGood : cMid)
+    liveCostR = costPx / dTL
+    cell(6, "Maliyet / risk", str.tostring(liveCostR, "#.00") + "R", liveCostR <= maxCostR ? cGood : cBad)
+    cell(7, "Fonlama", nearFunding ? "Yakın, sinyal yok" : str.tostring(fundPeriod - minsSince) + " dk sonra", nearFunding ? color.yellow : cMid)
+    cell(8, "Trend skoru L / S", str.tostring(tScoreL) + " / " + str.tostring(tScoreS), tScoreL >= minScore ? cGood : tScoreS >= minScore ? cBad : cMid)
+    cell(9, "Durum", status, dir == 1 ? cGood : dir == -1 ? cBad : color.white)
+    winTxt = nTr > 0 ? str.tostring(nWin * 100.0 / nTr, "#") + "%" : "-"
+    cell(10, "Geçmiş işlem / isabet", str.tostring(nTr) + " / " + winTxt, cMid)
+    pfTxt = grossL > 0 ? str.tostring(grossW / grossL, "#.00") : "-"
+    cell(11, "Net R / PF", str.tostring(sumR, "#.#") + "R / " + pfTxt, sumR > 0 ? cGood : sumR < 0 ? cBad : cMid)
+    warnTxt = timeframe.period != "1" ? "1 dk grafiğe geçin" : volMa > 0 ? "Yok" : "Hacim verisi yok"
+    cell(12, "Uyarı", warnTxt, warnTxt == "Yok" ? cMid : color.yellow)
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir
