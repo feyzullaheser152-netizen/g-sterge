@@ -469,3 +469,50 @@ Piyasa değişir: Bir bulgu zamanla güçlenebilir ya da bozulabilir. Bu yüzden
   - **%50 bandı:** 2025'te %47–49, 2026'da %50–53 kapsıyor. Tolerans içinde ama yön değiştirmiş.
   - **Turuncu uyarı** aydan aya gürültülü (−5 ile +15 bp). Tek ay sonucu tek başına karar için yetmez.
   - Fonlama dakikaları bütün aylarda ×0,9–1,3; LONG kovalamada kalıcı bir etki yok (12 ayda +1,2 bp, t 0,9).
+
+## 12. LuxAlgo "Smart Money Concepts" (`smc_port.py`, `lux_seviye.py`, `lux_olay.py`; bağımsız iki port)
+
+TradingView topluluk betikleri arasında en çok kullanılan gösterge. Bölüm 7'deki FVG/OB testi basitleştirilmiş tanımlarla yapılmıştı. Bu bölüm, betiğin kendi tanımlarını (varsayılan girdiler) birebir sınar.
+
+**Port:**
+- İki ajan birbirinden bağımsız Python portu yazdı. Tüm dönemde 1,16 milyon olayın 19'u dışında birebir aynı çıktılar.
+- Kalan 19 fark, Pine'ın karşılaştırmalarda 9 ondalık yuvarlama kuralıyla çözüldü.
+- Kanonik modül `smc_port.py`; LuxAlgo kodu kopyalanmadı. Mantık uyarlaması olduğu için dosya aynı lisansla (CC BY-NC-SA 4.0) paylaşılır. VSP.pine bu dosyayı kullanmaz.
+- TradingView çıktısıyla karşılaştırma yapılamadı. İki portun aynı yorumda birleşmesi spesifikasyonun doğru okunduğunu gösterir, ama kanıtlamaz.
+
+**Olaylar ve durumlar** (z15 eşleştirmeli 15 dk etki, bp, t; 2025 / 2026):
+
+| Öğe | Etki | Sonuç |
+|---|---|---|
+| BOS iç (5) | −0,50 (−1,2) / −0,40 (−1,4) | Bilgi yok |
+| CHoCH iç | −0,02 / +0,03 | Bilgi yok |
+| BOS swing (50) | −1,44 (−1,7) / +0,29 (0,4) | Bilgi yok |
+| CHoCH swing | −0,36 / +0,80 (1,3) | Bilgi yok |
+| İç eğilim ("Color Candles") yönünde | −0,23 (−1,5) / −0,28 (−2,2) | Bilgi yok, hafif ters |
+| Premium + Discount (ortalamaya dönüş) | +0,81 (2,0) / +0,96 (2,2) | İstatistik olarak seçilebiliyor ama ≈ 1 bp; 3 bp eşiğinin ve 8–12 bp maliyetin çok altında |
+
+- VSP'nin mor koşulları dışında hiçbir olaydan sonra oynaklık ×1,22'yi geçmedi. z15 eşleştirmesiyle ×0,96–1,06.
+
+**Seviyeler** (yakın placeboya karşı tepki farkı, bp, t; 2025 / 2026):
+
+| Seviye | Fark | Sonuç |
+|---|---|---|
+| İç Order Block | +2,14 (0,65) / −0,35 (−0,42) | Fark yok; ham tutma farkı bağlam eşleştirmesinde işaret değiştiriyor |
+| FVG (otomatik eşik) | +0,24 / −2,33 (−2,95) | Destek/direnç değil; biraz daha sık kırılıyor (≈ 2 bp) |
+| EQH (eşit tepeler) | −0,35 / +2,07 | Fark yok |
+| EQL (eşit dipler) | +1,85 / −2,13 | Kırpılmış veride biraz daha sık kırılıyor (−3 bp); dayanıksız |
+| Strong/Weak High | +0,76 / −0,21 | Fark yok; "Strong" etiketinin bilgisi yok |
+| Strong/Weak Low | −0,60 / −0,57 | Fark yok; 2026'da "Strong Low" daha sık kırıldı (iddianın tersi) |
+
+**LuxAlgo'ya özgü notlar:**
+- Swing yapısı 50 dk, iç yapı 5 dk gecikmeyle bilinir. Kutular ve etiketler geçmişe çizilir, geçersizleşen bölgeler silinir. Bu yüzden ekran görüntüleri olduğundan isabetli görünür.
+- Ayı FVG'nin silme kuralı asimetrik: Fiyat boşluğa dokununca siliniyor (%44'ü bir sonraki mumda).
+- 1 dk grafikte parite başına günde yaklaşık 85 FVG ve 70 iç OB oluşuyor.
+
+**Literatür:**
+- SMC'nin kendi iddiaları için hakemli kanıt bulunamadı.
+- En sistematik iki test kayda değer bir avantaj bulmuyor: hakemsiz bir SSRN çalışması (G10 FX) ve StatOasis'in açık backtest'i (ABD endeksleri). SSRN çalışmasında likidite süpürmesi dönüşü değil, devamı öngörüyor.
+- Sağlam yakın bulgu Osler'e (2003, 2005) ait: Stop emirleri belirgin seviyelerin hemen ötesinde kümelenir ve tetiklenince hareket hızlanır. Bizim "önceki gün/hafta düşüğü ve EQL biraz daha sık kırılıyor" bulgumuzla uyumlu, ama etki maliyetin altında.
+- Rastgele yürüyüşte de FVG'lerin %73–84'ü dolar; aynı uzaklıktaki rastgele seviyelerde de oran aynıdır. "FVG dolum oranı" tek başına bir şey kanıtlamaz.
+
+**Karar:** VSP'ye LuxAlgo SMC öğesi eklenmedi.
