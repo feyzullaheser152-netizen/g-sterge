@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v5.7)
+## Tanım Kartı (v5.7.1)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **piyasayı anlatır**.
@@ -18,7 +18,7 @@
 
 - **Beklenen hareket sarıysa:** Ufukta 08:30, 09:30, Pazar 18:00 ya da FOMC var, veya NY açılışının ilk 14 dakikası sürüyor. Bu anlarda %80 aralığı gerçekte yalnızca %64–75 kapsar; gerçek hareket daha geniş olabilir.
 - Fareyle geçmiş bir mumun üstüne gelince değerler o anı gösterir.
-- **Veri Penceresi'nde ek değerler:** Sıradaki FOMC'ye kalan gün, sıradaki CPI/NFP'ye kalan gün, kullanılan kayma %, son 15 dk hareket (z), tahmini delta (%), 1 dk ATR (%).
+- **Veri Penceresi'nde ek değerler:** Sıradaki FOMC'ye ve CPI/NFP'ye kalan gün (New York takvim günü; olay günü 0), kullanılan kayma %, son 15 dk hareket (z), tahmini delta (%), 1 dk ATR (%).
 
 **Arka plan:**
 

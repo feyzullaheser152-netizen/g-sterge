@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.7.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v5.7.1 | 1 dakika piyasa gostergesi
 // Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
 // Grafikte tablo ya da kutu yoktur. Bilgi uc yoldan verilir:
 //   1) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
@@ -174,8 +174,10 @@ tF = nextListed(fomcDays, 14, 0)
 tB = nextListed(bigDays, 8, 30)
 nxT = math.min(nz(tD, 9e15), nz(tO, 9e15), nz(tT, 9e15), nz(tS, 9e15), nz(tF, 9e15))
 nxMin = nxT < 9e15 ? math.round((nxT - time) / 60000) : na
-fomcDay = na(tF) ? na : math.floor((tF - time) / 86400000)
-bigDay  = na(tB) ? na : math.floor((tB - time) / 86400000)
+// Kalan gun: New York takvim gunu farki (olay gunu 0, bir gun once 1)
+etDay0  = timestamp("UTC", year(time, NY), month(time, NY), dayofmonth(time, NY))
+fomcDay = na(tF) ? na : math.round((timestamp("UTC", year(tF, NY), month(tF, NY), dayofmonth(tF, NY)) - etDay0) / 86400000)
+bigDay  = na(tB) ? na : math.round((timestamp("UTC", year(tB, NY), month(tB, NY), dayofmonth(tB, NY)) - etDay0) / 86400000)
 // Sari beklenen hareket: 08:30, 09:30, Pazar 18:00 ya da FOMC ufuktayken veya NY acilisinin ilk 14 dakikasinda bant oldugundan dar kalir
 // (olcum: bu anlarda %80 bant her ay %64-75 kapsar, diger anlarda %81; 10:00 ufuktayken %78-83, sorun yok)
 inH(int t) => not na(t) and t > time and t - time <= horizon * 60000
