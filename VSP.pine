@@ -1,13 +1,14 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.6.1 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v5.7.0 | 1 dakika piyasa gostergesi
 // Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
 // Grafikte tablo ya da kutu yoktur. Bilgi uc yoldan verilir:
 //   1) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
-//   2) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis); kirmizi = FOMC aciklamasinin ilk dakikalari;
+//   2) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
+//      kirmizi = FOMC aciklamasinin ilk dakikalari ve CPI / Istihdam Raporu (NFP) gunlerinde 08:30 ET mumu;
 //      turuncu = sert satis akisinin hemen ardindaki mum (bu mumda SHORT kovalamak ortalamada dezavantajli).
 //   3) Cizgiler: VWAP ve +-2 sigma bantlari, onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Yalnizca bilgi icindir;
 //      testlerde hicbiri rastgele seviyelerden daha iyi tutmadi.
-// Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10).
+// Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10-13).
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true)
 
 // === Girdiler ===
@@ -15,7 +16,7 @@ grpE = "Maliyet (hareket / maliyet hesabı için)"
 entryMode = input.string("Limit (maker)", "Giriş emri tipiniz", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
 makerFee  = input.float(0.02, "Maker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 takerFee  = input.float(0.05, "Taker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
-slipSide  = input.float(0.01, "Kayma % (tek yön)", step = 0.005, group = grpE, display = display.none)
+slipSide  = input.float(0.01, "Kayma % (tek yön; en az yarım tick)", step = 0.005, group = grpE, display = display.none)
 
 grpP = "Piyasa koşulu"
 horizon   = input.int(15, "Beklenen hareket ufku (dk)", minval = 1, maxval = 240, group = grpP, display = display.none)
@@ -78,7 +79,9 @@ em50  = 0.61 * sigH
 em80  = 1.23 * sigH
 
 // Hareket / maliyet: ufuktaki tipik hareket (%50 dilim), gidis-donus maliyetinin kac kati
-takerX   = takerFee + slipSide
+// Kayma en az yarim tick: makas 1 tick'in altina inemez (Mart 2024 gercek kotasyon: zamanin %92-100'unde tam 1 tick). Kaba tickli ucuz coinlerde yarim tick 2-4 bp olabilir.
+slipEff  = math.max(slipSide, 50 * syminfo.mintick / close)
+takerX   = takerFee + slipEff
 entryX   = isLimit ? makerFee : takerX
 costPct  = entryX + takerX
 moveCost = costPct > 0 ? em50 * 100 / costPct : na
@@ -118,6 +121,9 @@ var array<int> nyHol = array.from(20261126, 20261225, 20270101, 20270118, 202702
 var array<int> dataHol = array.from(20261012, 20261111, 20261126, 20261225, 20270101, 20270118, 20270215, 20270531, 20270618, 20270705, 20270906, 20271011, 20271111, 20271125, 20271224, 20271231, 20280117, 20280221, 20280529, 20280619, 20280704, 20280904, 20281009, 20281110, 20281123, 20281225)
 var array<int> noHol = array.new<int>()
 var array<int> fomcDays = array.from(20261028, 20261209, 20270127, 20270317, 20270428, 20270609, 20270728, 20270915, 20271027, 20271208, 20280126)
+// CPI ve Istihdam Raporu (NFP) gunleri, 08:30 ET. Her tarih en az iki bagimsiz kaynakla dogrulandi (arastirma/takvim.py).
+// BLS 2027 takvimini yayimlayinca ekleyin. Son tarihten sonra 08:30 yalnizca mor kalir (eski davranis).
+var array<int> bigDays = array.from(20261014, 20261106, 20261110, 20261204, 20261210)
 etMin  = hour(time, NY) * 60 + minute(time, NY)
 etDow  = dayofweek(time, NY)
 etYmd  = year(time, NY) * 10000 + month(time, NY) * 100 + dayofmonth(time, NY)
@@ -125,7 +131,11 @@ isHol  = array.includes(nyHol, etYmd)
 isDHol = array.includes(dataHol, etYmd)
 isFomc = array.includes(fomcDays, etYmd)
 wkDay  = etDow >= 2 and etDow <= 6
-evData    = not isDHol and etDow >= 3 and etDow <= 6 and etMin == 510
+isBig     = array.includes(bigDays, etYmd)
+dataDay   = not isDHol and etDow >= 3 and etDow <= 6
+// 08:30: CPI/NFP gunlerinde 08:30 kirmizi (x6-11), 08:30-08:38 mor; diger Sali-Cuma gunlerinde yalnizca 08:30 mor (x1,5-2)
+evData    = dataDay and (etMin == 510 or (isBig and etMin >= 510 and etMin <= 518))
+evDataRed = dataDay and isBig and etMin == 510
 evOpen    = not isHol and wkDay and etMin >= 570 and etMin <= 583
 evTen     = not isDHol and wkDay and etMin >= 600 and etMin <= 608
 evSun     = etDow == 1 and etMin >= 1080 and etMin <= 1087
@@ -147,11 +157,11 @@ nextEvent(int evH, int evM, string days, array<int> hol) =>
             best := evT
     best
 
-// Bir sonraki FOMC aciklamasi (14:00 ET)
-nextFomc() =>
+// Listedeki bir sonraki gun (FOMC 14:00 ET, CPI/NFP 08:30 ET)
+nextListed(array<int> days, int evH, int evM) =>
     int best = na
-    for ymd in fomcDays
-        evT = timestamp(NY, int(math.floor(ymd / 10000)), int(math.floor((ymd % 10000) / 100)), ymd % 100, 14, 0)
+    for ymd in days
+        evT = timestamp(NY, int(math.floor(ymd / 10000)), int(math.floor((ymd % 10000) / 100)), ymd % 100, evH, evM)
         if na(best) and evT >= time
             best := evT
     best
@@ -160,10 +170,16 @@ tD = nextEvent(8, 30, "3456", dataHol)
 tO = nextEvent(9, 30, "23456", nyHol)
 tT = nextEvent(10, 0, "23456", dataHol)
 tS = nextEvent(18, 0, "1", noHol)
-tF = nextFomc()
+tF = nextListed(fomcDays, 14, 0)
+tB = nextListed(bigDays, 8, 30)
 nxT = math.min(nz(tD, 9e15), nz(tO, 9e15), nz(tT, 9e15), nz(tS, 9e15), nz(tF, 9e15))
 nxMin = nxT < 9e15 ? math.round((nxT - time) / 60000) : na
 fomcDay = na(tF) ? na : math.floor((tF - time) / 86400000)
+bigDay  = na(tB) ? na : math.floor((tB - time) / 86400000)
+// Sari beklenen hareket: 08:30, 09:30, Pazar 18:00 ya da FOMC ufuktayken veya NY acilisinin ilk 14 dakikasinda bant oldugundan dar kalir
+// (olcum: bu anlarda %80 bant her ay %64-75 kapsar, diger anlarda %81; 10:00 ufuktayken %78-83, sorun yok)
+inH(int t) => not na(t) and t > time and t - time <= horizon * 60000
+evInH   = inH(tD) or inH(tO) or inH(tS) or inH(tF) or evOpen
 
 // === Cizimler (en kalin, acik renkler) ===
 // Gun degisiminde (00:00 UTC) ilk mumda cizgi kesilir; boylece eski ve yeni gun degerleri dikey bir cizgiyle birlesmez
@@ -177,20 +193,23 @@ plot(showLevels ? asiaHi : na, "Asya yüksek", cAsia, 4, plot.style_linebr, line
 plot(showLevels ? asiaLo : na, "Asya düşük", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 
 // Arka plan: kirmizi > turuncu > mor (ayni anda yalnizca biri)
-redOn  = showVolBg and evFomcRed
+redOn  = showVolBg and (evFomcRed or evDataRed)
 flowOn = showFlowBg and chaseShort and not redOn
-bgcolor(redOn ? cRedBg : na, title = "FOMC ilk dakikalar")
+bgcolor(redOn ? cRedBg : na, title = "FOMC ilk dakikalar / CPI-NFP 08:30")
 bgcolor(flowOn ? cFlowBg : na, title = "Sert satış sonrası (SHORT kovalama)")
 bgcolor(showVolBg and volHigh and not redOn and not flowOn ? cVolBg : na, title = "Olağandışı oynaklık")
 
 // === Durum satiri ve veri penceresi (grafige cizilmez) ===
 mcCol = moveCost >= 2 ? cGood : moveCost >= 1 ? cWarn : cBad
 nxCol = evNow ? cEvent : nxMin <= 15 ? cWarn : cInfo
+emCol = evInH ? cWarn : cInfo
 plot(moveCost, "Hareket / maliyet (kat)", mcCol, display = display.status_line + display.data_window, precision = 1)
-plot(em50 * 100, "Beklenen hareket ±% (%50)", cInfo, display = display.status_line + display.data_window, precision = 2)
-plot(em80 * 100, "Beklenen hareket ±% (%80)", cInfo, display = display.status_line + display.data_window, precision = 2)
+plot(em50 * 100, "Beklenen hareket ±% (%50)", emCol, display = display.status_line + display.data_window, precision = 2)
+plot(em80 * 100, "Beklenen hareket ±% (%80)", emCol, display = display.status_line + display.data_window, precision = 2)
 plot(nxMin, "Sıradaki oynaklık anına kalan dk", nxCol, display = display.status_line + display.data_window, precision = 0)
 plot(fomcDay, "Sıradaki FOMC'ye kalan gün", cInfo, display = display.data_window, precision = 0)
+plot(bigDay, "Sıradaki CPI/NFP'ye kalan gün", cInfo, display = display.data_window, precision = 0)
+plot(slipEff, "Kullanılan kayma % (tek yön, en az yarım tick)", cInfo, display = display.data_window, precision = 3)
 plot(z15, "Son 15 dk hareket (z)", cInfo, display = display.data_window, precision = 1)
 plot(imb15 * 100, "Tahmini delta % (son 15 dk)", cInfo, display = display.data_window, precision = 0)
 plot(atr / close * 100, "1 dk ATR %", cInfo, display = display.data_window, precision = 3)

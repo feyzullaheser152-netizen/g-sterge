@@ -516,3 +516,81 @@ TradingView topluluk betikleri arasında en çok kullanılan gösterge. Bölüm 
 - Rastgele yürüyüşte de FVG'lerin %73–84'ü dolar; aynı uzaklıktaki rastgele seviyelerde de oran aynıdır. "FVG dolum oranı" tek başına bir şey kanıtlamaz.
 
 **Karar:** VSP'ye LuxAlgo SMC öğesi eklenmedi.
+
+## 13. Serbest araştırma turu (v5.7; ön kayıtlı testler, bağımsız doğrulama)
+
+Literatür ve TradingView ekosistemi taranarak beş aday çıkarıldı. Her biri sonuçlardan önce yazılmış kuralla 2025 (keşif) ve 2026 (doğrulama) verisinde sınandı. Değişiklik getiren iki aday ayrıca bağımsız bir ajanla sıfırdan yeniden ölçüldü.
+
+| Aday | Sonuç | VSP'ye etkisi |
+|---|---|---|
+| ABD veri takvimi (CPI ve NFP günleri) | **Kural tuttu, doğrulandı** | 08:30 bu günlerde kırmızı, 08:30–08:38 mor |
+| Kaymanın tabanı yarım tick | **Mantıksal sınır, doğrulandı** | Maliyet hesabında kayma en az yarım tick |
+| Olay ayarlı beklenen hareket | Kural tutmadı | Yalnızca sarı uyarı rengi (ölçüme dayalı, model değil) |
+| EDGE makas tahmini ve olay anı makas çarpanı | Kural tutmadı | Yok |
+| Turuncu uyarıyı yalnızca z15 ile tanımlama | Kural tutmadı (Jaccard %98, eşik %99) | Yok |
+
+### 13a. CPI / NFP takvimi (`takvim.py`, `veri_gunu.py`)
+- **Takvim ölçümden önce donduruldu.** Her tarih en az iki bağımsız kaynakla doğrulandı (bls.gov engelli olduğu için haber ve kurum kaynakları). Kapanma nedeniyle kayan ya da iptal edilen açıklamalar asıl tarihlerinde sayılmadı.
+- **A günleri** (CPI ya da NFP): 40 gün (2025: 22, 2026: 18). **B günleri:** diğer Salı–Cuma.
+- **08:30'da × normal** (parite medyanı, 2025 / 2026):
+
+| ET | A günleri | B günleri | Pazartesi (referans) |
+|---|---|---|---|
+| 08:29 | 2,18 / 1,86 | 0,91 / 0,80 | 0,90 / 0,83 |
+| **08:30** | **11,07 / 6,40** | **2,04 / 1,55** | 1,29 / 1,09 |
+| 08:31 | 3,35 / 2,50 | 1,39 / 1,33 | 1,33 / 1,19 |
+| 08:35 | 2,27 / 1,95 | 1,26 / 1,07 | 0,98 / 1,08 |
+| 08:38 | 1,73 / 1,63 | 1,07 / 1,00 | 0,92 / 1,22 |
+| 08:39 | 1,58 / 1,32 | 1,00 / 0,93 | 0,91 / 0,94 |
+
+- **Ön kayıtlı kural** (iki yılın küçüğü):
+  - A günlerinde ≥ ×3 olan dakika kırmızı → yalnızca 08:30.
+  - 08:30'dan başlayıp ≥ ×1,5 kalan ardışık dakikalar mor → 08:30–08:38.
+  - B günlerinde 08:30 ≥ ×1,5 ise mor kalır → kalır (×2,04 / ×1,55, sınırda).
+- **Sağlamlık:**
+  - A 08:30'un ≥ ×3 olma olasılığı gün bootstrap'ında %100 / %98.
+  - 08:30–08:35 sağlam. 08:36–08:38 2026'da kırılgan (%64–74).
+  - 2026'da A günlerinin %17'si sakin geçti (13 Şubat, 11 Mart, 5 Haziran). Kırmızı tipik durumu gösterir, her seferinde olacağı garanti değil.
+  - CPI ×14,7 / ×6,9; NFP ×7,6 / ×6,3. 2026 NFP etkisi tek güne bağlı (4 Eylül ×32).
+  - A günleri Salı–Cuma'nın yaklaşık %12'si, ama 08:30'daki fazlalığın yarısından çoğu bu günlerden geliyor.
+- **B günlerinde 08:30 sınırda:** 8 PPI günü çıkarılınca ×1,96 / ×1,49. İzlemede ilk zayıflayacak özellik büyük olasılıkla bu.
+- **Bağımsız doğrulama:** DOĞRULANDI. Pine'daki tarih dizisi (14 Ekim, 6 Kasım, 10 Kasım, 4 Aralık, 10 Aralık 2026) iki kaynakla doğru. 2027 tarihleri resmî takvim yayımlanmadığı için eklenmedi.
+
+### 13b. Maliyet gerçekçiliği (`makas.py`, `makas_analiz.py`, `makas_edge.py`)
+- **Ön doğrulama:** İşlem verisinden (aggTrades) türetilen makas ölçütü, gerçek kotasyona (bookTicker, Mart 2024) karşı 0/8 paritede geçti. Bu yüzden EDGE ve olay anı çarpanı karara bağlanamadı; tanımlayıcı sonuçlar da bunları desteklemiyor:
+  - **EDGE** (Ardia, Guidotti, Kroencke 2024): 1 dk mumlarda büyük paritelerin makasını 10–14 kat fazla gösteriyor.
+  - **Olay anında makas:** Gerçek kotasyonda ×1,01–1,14. Olay anının maliyeti makastan değil oynaklıktan geliyor; mor ve kırmızı arka plan bunu zaten anlatıyor.
+- **Gerçek yarım makas çok küçük** (2025 / 2026, bp): BTC 0,005 / 0,007; ETH 0,018 / 0,023; SOL 0,26 / 0,49. %0,01 (1 bp) varsayılan kayma büyük paritelerde makastan değil, gecikme ve emir büyüklüğü payından oluşur; tutucudur.
+- **Yarım tick tabanı:** Makas 1 tick'in altına inemez. Gerçek kotasyonda tick'i kaba paritelerde zamanın %92–100'ünde tam 1 tick.
+  - Yarım tick'in 1 bp'yi aştığı parite: 2025'te 5/22, 2026'da 7/22 (OP 3,95; DOT 3,58; NEAR 3,05; WIF 2,74 bp). Limit girişte gidiş-dönüş maliyeti OP'de %37, DOT'ta %32 artıyordu.
+  - Binance tick'i fiyatın yaklaşık %0,1'ine ulaşınca inceltiyor (ENA Nisan, ARB Haziran, DOT Temmuz, OP Ağustos 2026). Eylül 2026 itibarıyla taban yalnızca ADA, NEAR ve WIF'te devreye giriyor (+%12–17).
+  - Sabit bir değer bunu izleyemez. VSP `syminfo.mintick` ile grafiğin kendi tick'ini okur: `kayma = max(girdi, yarım tick / fiyat)`. Taban maliyeti yalnızca artırabilir.
+  - OKX tick değerleri doğrulanamadı (okx.com engelli); gösterge grafikteki borsanın tick'ini kullanır.
+- **Bağımsız doğrulama:** DOĞRULANDI. Ön kaydın katı okunuşunda (kapı kaldığı için "aday durur") taban da durur. Ama ön kayıt tabanı test dışı mantıksal sınır olarak tanımlıyor ve kapı yalnızca makas ölçütünü kullanan adaylara bağlı; bu okuma benimsendi.
+
+### 13c. Olay ayarlı beklenen hareket (`olay_bant.py`, `olay_bant_sec.py`, `olay_bant_tani.py`)
+- **Sorun gerçek:** Zamanlanmış olay ufuktayken bant dar kalıyor (%80 bandın kapsaması, H = 15, 2025 / 2026):
+
+| Durum | %80 kapsama |
+|---|---|
+| 08:30 ufukta (A günleri) | 29,7 / 52,4 |
+| 08:30 ufukta (tümü) | 69,7 / 72,2 |
+| 09:30 ufukta | 67,3 / 65,5 |
+| NY açılışından sonraki 15 dk | 70,8 / 71,7 |
+| Pazar 18:00 ufukta | 55,1 / 43,9 |
+| FOMC ufukta | 76,7 / 31,1 (6–8 toplantı) |
+| 10:00 ufukta | 78,3 / 83,1 |
+| Diğer olay sonrası anlar | 75–91 |
+| Olaysız | 79,6 / 80,7 |
+
+- **Model düzeltmesi tutmadı:** Olay dakikalarına çarpan tablosu (f) uygulayan model, ufuk sınıflarını düzeltti ama olay sonrası bantları fazla daralttı. Pazar ve FOMC'nin büyüklüğü yıldan yıla değişiyor (Pazar f 2,13 → 4,12). (a) ve (c) kuralları iki yılda da bozuldu.
+- **Uygulanan (model değil, ölçüme dayalı uyarı):** Beklenen hareket değerleri şu anlarda sarı gösterilir: 08:30, 09:30, Pazar 18:00 ya da FOMC ufuktayken ve NY açılışının ilk 14 dakikasında. 10:00 dahil değil, çünkü bant orada doğru.
+  - İzleme verisiyle (`izleme.py`): Sarı anlarda %80 bant 21 ayın her birinde %64–75 kapsıyor, diğer anlarda %81.
+  - Kesim doğal bir boşlukta: dar sınıflar ≤ %72, diğerleri ≥ %75.
+- **Genelleme notu:** Dondurulmuş 20 orta paritede (sıra 23–44) 0,61 / 1,23 katsayılarının genel kapsaması %77,5–89,5. Kalibrasyon 22 büyük paritede doğrulandı; küçük paritelerde bant çoğunlukla biraz geniş kalır.
+
+### 13d. Diğerleri
+- **Turuncu uyarıyı sadeleştirme (`kovalama_z.py`):** Yalnızca z15 ≤ −3 kullanmak aynı sonucu veriyor (5 dk +5,26 / +3,29 bp; BVC ile +5,32 / +3,30). Ön kayıtlı kural iki tanımın olay kümelerinin %99 örtüşmesini istiyordu; %98 çıktı. Değişiklik yapılmadı.
+- **Başabaş ufku (T\*):** T\* = 4H / (hareket/maliyet)². Yeni piyasa bilgisi değil, aynı değerin başka birimi; eklenmedi.
+- **Deribit opsiyon vadesi (Cuma 08:00 UTC):** Son dakikalarda × normal 1,34 / 0,90. İki yılda ≥ ×1,5 değil; eklenmedi.
+- **İzleme:** `izleme.py` artık CPI/NFP 08:30 (kırmızı), CPI/NFP 08:30–08:38 (mor), diğer Salı–Cuma 08:30 (mor) ve sarı anlardaki kapsamayı ayrı izliyor. Takvim listesi `takvim.py`'den okunur; yeni tarihler oraya ve VSP.pine'daki `bigDays` dizisine birlikte eklenmeli.

@@ -9,8 +9,9 @@ Arastirma betiklerinin kullandigi npz/ klasorune dokunulmaz (eski sonuclar yenid
 
 Olcumler (22 Binance USDT-M paritesi, takvim ayi bazinda; tanimlar VSP.pine v5.6 ve BULGULAR bolum 10 ile ayni):
   1) Beklenen hareket: 15 dk %50 (0,61) ve %80 (1,23) bantlarinin kapsamasi. Hedef 50 / 80.
+     Ayrica sari anlarda (08:30, 09:30, Pazar 18:00 ya da FOMC ufukta; NY acilisi 09:30-09:43) %80 kapsamasi.
   2) Turuncu (sert satis sonrasi): ilk mumda SHORT acanin 5 ve 15 dk ortalama kaybi (bp), gun kumelenmis t. Karsilastirma: LONG.
-  3) Mor / kirmizi (olagandisi oynaklik): olay pencereleri, asiri mumdan sonraki 4 mum (olay bazli, taban spike mumunda sabit),
+  3) Mor / kirmizi (olagandisi oynaklik): olay pencereleri (CPI/NFP gunleri arastirma/takvim.py listesinden), asiri mumdan sonraki 4 mum (olay bazli, taban spike mumunda sabit),
      iki yonde sert akis. x = |r1| / sigma_taban (onceki 1440 mumun std'si, bir mum gecikmeli);
      'x normal' = kategori ortalamasi / ayni aylarin tum mumlarinin ortalamasi.
   4) Izlenen ama gostergede olmayanlar: LONG kovalama, fonlama dakikalari (-3..+2 dk, 8 saatlik takvim).
@@ -21,6 +22,8 @@ Kaldirma kurali: iki ardisik tam ay penceresinde (bu ay ve bir onceki ay biten p
 import io, os, shutil, subprocess, sys, zipfile
 from datetime import datetime, timedelta, timezone
 import numpy as np, pandas as pd
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import takvim  # CPI / NFP gunleri (iki kaynakla dogrulanmis, dondurulmus liste)
 
 _SCR = "/tmp/claude-0/-home-user-g-sterge/dd5dff47-b7a7-5272-9606-8a636b522e39/scratchpad/data_bn"
 VERI = os.environ.get("VSP_VERI", _SCR if os.path.isdir(_SCR) else os.path.expanduser("~/vsp_veri"))
@@ -37,7 +40,8 @@ NYHOL = {20261126, 20261225, 20270101, 20270118, 20270215, 20270326, 20270531, 2
 DATAHOL = {20261012, 20261111, 20261126, 20261225, 20270101, 20270118, 20270215, 20270531, 20270618, 20270705, 20270906, 20271011, 20271111, 20271125, 20271224, 20271231, 20280117, 20280221, 20280529, 20280619, 20280704, 20280904, 20281009, 20281110, 20281123, 20281225}
 KARISIM_AYLAR = ["2026-10", "2026-11", "2026-12"]
 H = 15
-KATS = ["ABD verisi 08:30", "NY açılışı 09:30–09:43", "ABD verisi 10:00–10:08", "Pazar 18:00–18:07", "FOMC 14:00–14:05", "FOMC 13:59–14:44", "Aşırı mum sonrası 4 mum", "İki yönde sert akış", "Fonlama −3..+2 dk"]
+ADAYS = sorted(takvim.tarih_kumeleri()["A"] | set(takvim.GELECEK))  # CPI ve NFP gunleri (New York tarihi)
+KATS = ["CPI/NFP 08:30", "CPI/NFP 08:30–08:38", "Diğer Sal–Cum 08:30", "NY açılışı 09:30–09:43", "ABD verisi 10:00–10:08", "Pazar 18:00–18:07", "FOMC 14:00–14:05", "FOMC 13:59–14:44", "Aşırı mum sonrası 4 mum", "İki yönde sert akış", "Fonlama −3..+2 dk"]
 
 
 # ---------------------------------------------------------------- guncelle
@@ -154,10 +158,13 @@ def parite(s):
     hol = np.isin(ymd, list(NYHOL))
     dhol = np.isin(ymd, list(DATAHOL))
     wk = dow < 5
+    big = np.isin(gun, ADAYS) & (dow >= 1) & (dow <= 4) & ~dhol
     utc = pd.to_datetime(ts, unit="s", utc=True)
     fmod = ((utc.hour * 60 + utc.minute).to_numpy()) % 480
     kat = {
-        "ABD verisi 08:30": (em == 510) & (dow >= 1) & (dow <= 4) & ~dhol,
+        "CPI/NFP 08:30": big & (em == 510),
+        "CPI/NFP 08:30–08:38": big & (em >= 510) & (em <= 518),
+        "Diğer Sal–Cum 08:30": (em == 510) & (dow >= 1) & (dow <= 4) & ~dhol & ~np.isin(gun, ADAYS),
         "NY açılışı 09:30–09:43": wk & ~hol & (em >= 570) & (em <= 583),
         "ABD verisi 10:00–10:08": wk & ~dhol & (em >= 600) & (em <= 608),
         "Pazar 18:00–18:07": (dow == 6) & (em >= 1080) & (em <= 1087),
@@ -191,11 +198,15 @@ def parite(s):
         sg = -1 if side == "SHORT" else 1
         for hh in (5, 15):
             ev.append(pd.DataFrame({"ay": ay[ix], "gun": ts[ix] // 86400, "sym": s, "yon": side, "h": hh, "kayip": -sg * (lc[ix + hh] - lc[ix]) * 1e4}))
+    # sari beklenen hareket (VSP evInH): 08:30, 09:30, Pazar 18:00 ya da FOMC 14:00 sonraki H mumda baslar, ya da NY acilisi 09:30-09:43
+    bas = ((em == 510) & (dow >= 1) & (dow <= 4) & ~dhol) | ((em == 570) & wk & ~hol) | ((dow == 6) & (em == 1080)) | (fom & (em == 840))
+    cb = np.r_[0, np.cumsum(bas)]
     # kapsama (her 5 mumda bir)
     ix = np.arange(3000, n - H - 1, 5)
     ix = ix[np.isfinite(sb[ix]) & (sb[ix] > 0) & (ew[ix] > 0)]
     mv = np.abs(lc[ix + H] - lc[ix])
-    kap = pd.DataFrame({"ay": ay[ix], "q": mv / np.sqrt(ew[ix] * H), "qb": mv / np.sqrt((0.8 * ew[ix] + 0.2 * sb[ix] ** 2) * H), "rho": np.sqrt(ew[ix]) / sb[ix], "hm": 0.61 * np.sqrt(ew[ix] * H) * 100 >= 0.08})
+    sari = (cb[ix + H + 1] - cb[ix + 1] > 0) | kat["NY açılışı 09:30–09:43"][ix]
+    kap = pd.DataFrame({"ay": ay[ix], "q": mv / np.sqrt(ew[ix] * H), "qb": mv / np.sqrt((0.8 * ew[ix] + 0.2 * sb[ix] ** 2) * H), "rho": np.sqrt(ew[ix]) / sb[ix], "hm": 0.61 * np.sqrt(ew[ix] * H) * 100 >= 0.08, "sari": sari})
     return V.reset_index(), pd.concat(ev), kap, int(ts[-1])
 
 
@@ -253,6 +264,7 @@ def rapor():
         o12, nf = hacim(w12)
         K3 = K[K.ay.isin(w3)]
         c50, c80 = (K3.q <= 0.61).mean() * 100, (K3.q <= 1.23).mean() * 100
+        cs80, cd80 = (K3.q[K3.sari] <= 1.23).mean() * 100, (K3.q[~K3.sari] <= 1.23).mean() * 100
         E12, E3 = E[E.ay.isin(w12)], E[E.ay.isin(w3)]
         s5 = kume_t(E12[(E12.yon == "SHORT") & (E12.h == 5)])
         s15 = kume_t(E12[(E12.yon == "SHORT") & (E12.h == 15)])
@@ -262,17 +274,19 @@ def rapor():
         sat = [
             ("Beklenen hareket %80 bandı (hedef 80)", f"%{tr(c80, 1)}", durum(abs(c80 - 80), 3, 6, ters=True), "son 3 tam ay; mutlak sapma ≤ 3 tutuyor, ≤ 6 zayıfladı"),
             ("Beklenen hareket %50 bandı (hedef 50)", f"%{tr(c50, 1)}", durum(abs(c50 - 50), 3, 6, ters=True), "son 3 tam ay; aynı"),
+            ("Sarı beklenen hareket: %80 bandın sarı anlarda kapsaması", f"%{tr(cs80, 1)} (diğer anlar %{tr(cd80, 1)})", durum(cs80, 76, 78, ters=True), "son 3 tam ay; sarı uyarı, bant dar kaldığı sürece gerekli: ≤ %76 tutuyor, ≤ %78 zayıfladı, > %78 bozuldu (uyarı gereksiz)"),
             ("Turuncu: SHORT kovalama, 5 dk kayıp", f"{tr(s5[0], 2, True)} bp (t {tr(s5[2], 1)}; parite %{(ps > 0).mean() * 100:.0f}); son 3 ay {tr(s5_3[0], 2, True)}", durum(s5[0], 1.0, 0.0), "son 12 tam ay; ≥ +1 bp tutuyor, 0–1 zayıfladı, < 0 bozuldu"),
             ("Turuncu: SHORT kovalama, 15 dk kayıp", f"{tr(s15[0], 2, True)} bp (t {tr(s15[2], 1)})", durum(s15[0], 1.0, 0.0), "son 12 tam ay; aynı"),
         ]
         for k in KATS:
             if k.startswith("Fonlama"):
                 continue
-            if k.startswith("FOMC"):
-                kr = k == "FOMC 14:00–14:05"
+            if k.startswith("FOMC") or k.startswith("CPI"):
+                kr = k in ("FOMC 14:00–14:05", "CPI/NFP 08:30")
                 v, nn = o12[k]
                 esik = (3.0, 2.0) if kr else (1.5, 1.2)
-                sat.append((("Kırmızı: " if kr else "Mor: ") + k, f"×{tr(v)} ({nf} toplantı)", durum(v, *esik), f"son 12 tam ay; ≥ ×{tr(esik[0], 1)} tutuyor, ≥ ×{tr(esik[1], 1)} zayıfladı"))
+                say = f"{nf} toplantı" if k.startswith("FOMC") else f"{sum(1 for d in ADAYS if d[:7] in w12)} gün"
+                sat.append((("Kırmızı: " if kr else "Mor: ") + k, f"×{tr(v)} ({say})", durum(v, *esik), f"son 12 tam ay; ≥ ×{tr(esik[0], 1)} tutuyor, ≥ ×{tr(esik[1], 1)} zayıfladı"))
             else:
                 v, nn = o3[k]
                 sat.append(("Mor: " + k, f"×{tr(v)} (n {nn})", durum(v, 1.5, 1.2), "son 3 tam ay; ≥ ×1,5 tutuyor, ≥ ×1,2 zayıfladı"))
@@ -300,6 +314,7 @@ def rapor():
         karisim = f"Veri birikiyor: {', '.join(KARISIM_AYLAR)} tam ayları gerekli; tamamlanan: {', '.join(a for a in KARISIM_AYLAR if a in tam) or 'yok'}."
     # aylik seri
     kap = K.groupby("ay").agg(k50=("q", lambda x: (x <= 0.61).mean() * 100), k80=("q", lambda x: (x <= 1.23).mean() * 100), hm=("hm", lambda x: x.mean() * 100))
+    kap["ks80"] = K[K.sari].groupby("ay").q.apply(lambda x: (x <= 1.23).mean() * 100)
     kov = E.groupby(["ay", "yon", "h"]).kayip.mean().unstack(["yon", "h"])
     kovn = E[E.h == 5].groupby(["ay", "yon"]).size().unstack("yon")
     taban = G["tum_s"] / G["tum_n"]
@@ -307,13 +322,14 @@ def rapor():
     seri = pd.DataFrame(index=aylar)
     seri["%50 kapsama"] = kap["k50"]
     seri["%80 kapsama"] = kap["k80"]
+    seri["Sarı %80 kapsama"] = kap["ks80"]
     seri["SHORT kov. 5 dk"] = kov[("SHORT", 5)]
     seri["SHORT n"] = kovn["SHORT"]
     seri["LONG kov. 5 dk"] = kov[("LONG", 5)]
-    for k, kisa in (("ABD verisi 08:30", "08:30"), ("NY açılışı 09:30–09:43", "09:30"), ("ABD verisi 10:00–10:08", "10:00"), ("Pazar 18:00–18:07", "Pazar"), ("FOMC 13:59–14:44", "FOMC"), ("Aşırı mum sonrası 4 mum", "Aşırı mum"), ("İki yönde sert akış", "İki yön"), ("Fonlama −3..+2 dk", "Fonlama")):
+    for k, kisa in (("CPI/NFP 08:30", "CPI/NFP"), ("Diğer Sal–Cum 08:30", "08:30 diğer"), ("NY açılışı 09:30–09:43", "09:30"), ("ABD verisi 10:00–10:08", "10:00"), ("Pazar 18:00–18:07", "Pazar"), ("FOMC 13:59–14:44", "FOMC"), ("Aşırı mum sonrası 4 mum", "Aşırı mum"), ("İki yönde sert akış", "İki yön"), ("Fonlama −3..+2 dk", "Fonlama")):
         seri[kisa] = oran[k]
     seri["Hareket ≥ maliyet %"] = kap["hm"]
-    bic = {"%50 kapsama": 1, "%80 kapsama": 1, "SHORT kov. 5 dk": 1, "SHORT n": 0, "LONG kov. 5 dk": 1, "Hareket ≥ maliyet %": 0}
+    bic = {"%50 kapsama": 1, "%80 kapsama": 1, "Sarı %80 kapsama": 1, "SHORT kov. 5 dk": 1, "SHORT n": 0, "LONG kov. 5 dk": 1, "Hareket ≥ maliyet %": 0}
     md = []
     md.append("# VSP İzleme (yeniden doğrulama)\n")
     md.append("Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosya `arastirma/izleme.py` ile üretilir: Göstergenin dayandığı her bulgu ay ay yeniden ölçülür.\n")
