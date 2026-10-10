@@ -1,18 +1,29 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v5.7.1 | 1 dakika piyasa gostergesi
-// Gosterge AL/SAT, stop ya da pozisyon onerisi vermez: nereden alip satacaginiza ve stopunuza siz karar verirsiniz.
-// Grafikte tablo ya da kutu yoktur. Bilgi uc yoldan verilir:
-//   1) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
-//   2) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
+// Vadeli Scalp Pusulasi (VSP) - v6.0.0 | 1 dakika piyasa gostergesi
+// Kullanicinin istegiyle AL/SAT, stop, hedef ve pozisyon buyuklugu onerisi geri geldi (v6.0). Grafikte tablo ya da kutu yoktur. Bilgi dort yoldan verilir:
+//   1) AL/SAT etiketi (mum kapanisinda): sert 15 dk hareketten sonra kisa vadeli geri donus. Stop ve hedef cizgileri, etikette miktar.
+//      Dayanak: arastirmada tutarli cikan tek yon etkisi (BULGULAR 3, 10c, 14). Varsayilanlar ön kayitli secimle (2025): limit giris, stop 2 sigma15, hedef 2R, en fazla 5 dk.
+//      Test (22 parite, VIP 0 komisyon): islem basina net -8,5 bp (2025) ve -9,7 bp (2026), yani -0,07 / -0,08 R. Kurali gecmedi; kullanici istegiyle gosterilir.
+//      Ayni motorla sinanan 13 topluluk gostergesinin (Supertrend, UT Bot, MACD, WaveTrend, Squeeze vb.) hicbiri daha iyi degil (BULGULAR 14).
+//   2) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
+//   3) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
 //      kirmizi = FOMC aciklamasinin ilk dakikalari ve CPI / Istihdam Raporu (NFP) gunlerinde 08:30 ET mumu;
 //      turuncu = sert satis akisinin hemen ardindaki mum (bu mumda SHORT kovalamak ortalamada dezavantajli).
-//   3) Cizgiler: VWAP ve +-2 sigma bantlari, onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Yalnizca bilgi icindir;
+//   4) Cizgiler: VWAP ve +-2 sigma bantlari, onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Yalnizca bilgi icindir;
 //      testlerde hicbiri rastgele seviyelerden daha iyi tutmadi.
-// Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10-13).
-indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true)
+// Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10-14).
+indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
 
 // === Girdiler ===
-grpE = "Maliyet (hareket / maliyet hesabı için)"
+grpS = "AL/SAT, stop ve pozisyon"
+showSig  = input.bool(true, "AL/SAT sinyalleri", group = grpS, display = display.none)
+balance  = input.float(1000, "Hesap bakiyesi (USDT)", minval = 1, group = grpS, display = display.none)
+riskPct  = input.float(0.5, "İşlem başına risk % (stopta kaybedilecek tutar)", minval = 0.05, maxval = 5, step = 0.05, group = grpS, display = display.none)
+stopK    = input.float(2.0, "Stop mesafesi (15 dk oynaklığın katı)", minval = 0.5, maxval = 5, step = 0.25, group = grpS, display = display.none)
+tpR      = input.float(2.0, "Hedef (stop mesafesinin katı, R)", minval = 0.5, maxval = 5, step = 0.25, group = grpS, display = display.none)
+holdMax  = input.int(5, "En uzun tutma (dk); sonra kapanışta çık", minval = 1, maxval = 240, group = grpS, display = display.none)
+
+grpE = "Maliyet"
 entryMode = input.string("Limit (maker)", "Giriş emri tipiniz", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
 makerFee  = input.float(0.02, "Maker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 takerFee  = input.float(0.05, "Taker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
@@ -43,6 +54,8 @@ cEvent  = #EA80FC
 cVolBg  = color.new(#EA80FC, 82)
 cRedBg  = color.new(#FF8A80, 72)
 cFlowBg = color.new(#FFD180, 72)
+cBuy    = #69F0AE
+cSell   = #FF5252
 
 if timeframe.period != "1"
     runtime.error("VSP yalnızca 1 dakikalık grafik için kalibre edildi. Grafiği 1 dakikaya alın.")
@@ -183,6 +196,91 @@ bigDay  = na(tB) ? na : math.round((timestamp("UTC", year(tB, NY), month(tB, NY)
 inH(int t) => not na(t) and t > time and t - time <= horizon * 60000
 evInH   = inH(tD) or inH(tO) or inH(tS) or inH(tF) or evOpen
 
+// === AL/SAT, stop, hedef ve pozisyon (v6.0; arastirma/sinyal_v6.py ile ayni kurallar) ===
+// AL: yeni sert satis mumu kapandi (z15 <= -3, onceki 15 mumda sert satis yok). SAT: yeni sert alis mumu. Beklenen: kisa vadeli geri donus.
+// Engeller (sabit 15 dk ufukla): zamanlanmis olay 15 dk icinde ya da suruyor (stop olcegi orada guvenilmez), tipik 15 dk hareket maliyetin altinda, acik islem var.
+// Stop: stopK x sig15, hedef: tpR x stop mesafesi, holdMax dk sonra kapanista cikis. Ayni mumda stop ve hedef: once stop (ihtiyatli).
+// Miktar: stopta kaybedilen tutar (mesafe + giris + stop cikisi maliyeti) = bakiye x risk %.
+inH15(int t) => not na(t) and t > time and t - time <= 15 * 60000
+evIn15   = inH15(tD) or inH15(tO) or inH15(tS) or inH15(tF) or evOpen
+sig15    = math.sqrt(ewVar * 15)
+cost15ok = costPct > 0 and 0.61 * sig15 * 100 >= costPct
+newUp    = flowUp and upAgo >= 15
+inFee    = entryX / 100
+outStop  = takerX / 100
+riskFrac = stopK * sig15 + inFee + outStop
+qtyNow   = riskFrac > 0 ? balance * riskPct / 100 / (close * riskFrac) : na
+
+var int   pos   = 0
+var int   pend  = 0
+var int   sigI  = na
+var int   exitI = -1
+var float sigS  = na
+var float entP  = na
+var float stopP = na
+var float tgtP  = na
+var int   nTr   = 0
+var float sumR  = 0.0
+exitNow = false
+exitPx  = float(na)
+exitTgt = false
+// 1) Bir onceki mumda verilen sinyalin girisi (piyasa: bu mumun acilisi; limit: sinyal kapanisi, fiyat otesine gecerse dolar)
+firstBar = false
+if pend != 0
+    if isLimit
+        filled = pend > 0 ? low < entP : high > entP
+        if filled
+            pos := pend
+            firstBar := true
+    else
+        entP := open
+        pos := pend
+        firstBar := true
+    if pos != 0
+        stopP := entP * math.exp(-pos * stopK * sigS)
+        tgtP := entP * math.exp(pos * tpR * stopK * sigS)
+    pend := 0
+// 2) Acik islemin cikisi: stop, hedef (limit girisin dolum mumunda hedef sayilmaz) ya da sure
+if pos != 0
+    hitS = pos > 0 ? low <= stopP : high >= stopP
+    hitT = pos > 0 ? high > tgtP : low < tgtP
+    if firstBar and isLimit
+        hitT := false
+    if hitS
+        po = firstBar and isLimit ? entP : open
+        exitPx := pos > 0 ? math.min(stopP, po) : math.max(stopP, po)
+        exitNow := true
+    else if hitT
+        exitPx := tgtP
+        exitTgt := true
+        exitNow := true
+    else if bar_index - sigI >= holdMax
+        exitPx := close
+        exitNow := true
+    if exitNow
+        fOut = exitTgt ? makerFee / 100 : outStop
+        netR = (pos * math.log(exitPx / entP) - inFee - fOut) / (stopK * sigS + inFee + outStop)
+        nTr += 1
+        sumR += netR
+        pos := 0
+        exitI := bar_index
+// 3) Yeni sinyal (yalnizca kapanmis mumda; acik ya da bekleyen islem yokken)
+canSig = showSig and barstate.isconfirmed and pos == 0 and pend == 0 and bar_index > exitI and not (evIn15 or evNow) and cost15ok and sig15 > 0
+buySig  = canSig and newDn
+sellSig = canSig and newUp and not newDn
+if buySig or sellSig
+    d = buySig ? 1 : -1
+    pend := d
+    sigI := bar_index
+    sigS := sig15
+    entP := close
+    stopP := close * math.exp(-d * stopK * sig15)
+    tgtP := close * math.exp(d * tpR * stopK * sig15)
+    notional = qtyNow * close
+    tip = "Giriş ≈ " + str.tostring(close, format.mintick) + (isLimit ? " (limit, sonraki mumda fiyat ötesine geçerse dolar)" : " (piyasa, sonraki mumun açılışı)") + "\nStop: " + str.tostring(stopP, format.mintick) + " (" + str.tostring(stopK * sig15 * 100, "#.##") + "%)" + "\nHedef: " + str.tostring(tgtP, format.mintick) + " (" + str.tostring(tpR * stopK * sig15 * 100, "#.##") + "%)" + "\nEn uzun tutma: " + str.tostring(holdMax) + " dk, sonra kapanışta çık" + "\nMiktar: " + str.tostring(qtyNow, "#.####") + " (≈ " + str.tostring(notional, "#") + " USDT, kaldıraç " + str.tostring(notional / balance, "#.#") + "x)" + "\nStopta kayıp ≈ " + str.tostring(balance * riskPct / 100, "#.##") + " USDT (maliyet dahil)"
+    label.new(bar_index, d > 0 ? low : high, (d > 0 ? "AL" : "SAT") + "\n" + str.tostring(qtyNow, "#.####"), style = d > 0 ? label.style_label_up : label.style_label_down, color = d > 0 ? cBuy : cSell, textcolor = color.black, size = size.small, tooltip = tip)
+tradeOn = pos != 0 or pend != 0 or exitNow
+
 // === Cizimler (en kalin, acik renkler) ===
 // Gun degisiminde (00:00 UTC) ilk mumda cizgi kesilir; boylece eski ve yeni gun degerleri dikey bir cizgiyle birlesmez
 dayOn = showLevels and not newDay
@@ -193,6 +291,8 @@ plot(dayOn ? pdh : na, "Önceki gün yüksek", cDay, 4, plot.style_linebr, lines
 plot(dayOn ? pdl : na, "Önceki gün düşük", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
 plot(showLevels ? asiaHi : na, "Asya yüksek", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 plot(showLevels ? asiaLo : na, "Asya düşük", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
+plot(tradeOn ? stopP : na, "Stop", cSell, 3, plot.style_linebr, display = display.pane + display.data_window)
+plot(tradeOn ? tgtP : na, "Hedef", cBuy, 3, plot.style_linebr, display = display.pane + display.data_window)
 
 // Arka plan: kirmizi > turuncu > mor (ayni anda yalnizca biri)
 redOn  = showVolBg and (evFomcRed or evDataRed)
@@ -215,8 +315,15 @@ plot(slipEff, "Kullanılan kayma % (tek yön, en az yarım tick)", cInfo, displa
 plot(z15, "Son 15 dk hareket (z)", cInfo, display = display.data_window, precision = 1)
 plot(imb15 * 100, "Tahmini delta % (son 15 dk)", cInfo, display = display.data_window, precision = 0)
 plot(atr / close * 100, "1 dk ATR %", cInfo, display = display.data_window, precision = 3)
+plot(qtyNow, "Önerilen miktar (şimdi girilse)", cInfo, display = display.data_window, precision = 4)
+plot(qtyNow * close, "Pozisyon değeri USDT (şimdi girilse)", cInfo, display = display.data_window, precision = 0)
+plot(stopK * sig15 * 100, "Stop mesafesi %", cInfo, display = display.data_window, precision = 2)
+plot(nTr, "Grafikteki AL/SAT işlemleri", cInfo, display = display.data_window, precision = 0)
+plot(nTr > 0 ? sumR / nTr : na, "Grafikteki işlemlerin ortalama net R'si", cInfo, display = display.data_window, precision = 2)
 
 // === Alarmlar (mum kapanisinda) ===
+alertcondition(buySig, "VSP: AL", "VSP: AL sinyali (sert satıştan sonra geri dönüş). Stop ve hedef grafikte.")
+alertcondition(sellSig, "VSP: SAT", "VSP: SAT sinyali (sert alıştan sonra geri dönüş). Stop ve hedef grafikte.")
 alertcondition(barstate.isconfirmed and newDn, "VSP: Sert satış akışı", "VSP: Sert satış akışı. Sonraki mumda SHORT kovalamak ortalamada dezavantajlı.")
 alertcondition(barstate.isconfirmed and volHigh and not volHigh[1], "VSP: Olağandışı oynaklık", "VSP: Olağandışı oynaklık başladı.")
 // VSP SONU - bu satiri goremiyorsaniz kod eksik kopyalanmistir

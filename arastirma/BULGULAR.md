@@ -594,3 +594,64 @@ Literatür ve TradingView ekosistemi taranarak beş aday çıkarıldı. Her biri
 - **Başabaş ufku (T\*):** T\* = 4H / (hareket/maliyet)². Yeni piyasa bilgisi değil, aynı değerin başka birimi; eklenmedi.
 - **Deribit opsiyon vadesi (Cuma 08:00 UTC):** Son dakikalarda × normal 1,34 / 0,90. İki yılda ≥ ×1,5 değil; eklenmedi.
 - **İzleme:** `izleme.py` artık CPI/NFP 08:30 (kırmızı), CPI/NFP 08:30–08:38 (mor), diğer Salı–Cuma 08:30 (mor) ve sarı anlardaki kapsamayı ayrı izliyor. Takvim listesi `takvim.py`'den okunur; yeni tarihler oraya ve VSP.pine'daki `bigDays` dizisine birlikte eklenmeli.
+
+## 14. AL/SAT sinyalinin geri gelmesi ve 13 topluluk göstergesi (v6.0; `sinyal_v6.py`, `topluluk_sinyal.py`)
+
+Kullanıcı, v5.0'da kaldırılan AL/SAT, stop ve pozisyon önerisini geri istedi. Ayrıca TradingView topluluk betiklerinin "en iyiler" kategorisinden en yüksek puanlı 15 göstergenin kodunu gönderdi ve işe yarayan kısımların eklenmesini istedi. Bütün adaylar aynı işlem motoruyla, sonuçlardan önce commit'lenen kurallarla sınandı.
+
+**Veri:** 22 Binance USDⓈ-M paritesi, 1 dk, Ocak 2025 – 8 Ekim 2026 (HYPE 30 Mayıs 2025'ten). İzleme verisiyle aynı kaynak (`izleme.py guncelle`).
+
+**İşlem motoru (ön kayıt):**
+- Giriş: piyasa (sonraki mumun açılışı, taker + kayma) ya da limit (sinyal kapanışında, yalnızca sonraki mum için; fiyat limitin ötesine geçerse dolar, maker).
+- Stop: k × σ15 (30 mumluk EWMA). Hedef: R × stop mesafesi. Süre: H mum sonra kapanışta çık. Aynı mumda stop ve hedef: önce stop.
+- Izgara: k {1; 1,5; 2} × R {1; 1,5; 2} × H {5; 15; 30} × giriş {piyasa, limit} = 54 ayar.
+- Engeller: Zamanlanmış olay 15 dk içinde ya da sürüyor; hareket / maliyet < 1; açık işlem var.
+- Maliyet: VIP 0 (maker %0,02, taker %0,05, kayma %0,01); ek senaryo düşük ücret (maker %0, taker %0,02).
+- Seçim: 2025'te en yüksek ortalama net R. Doğrulama: aynı ayarın 2026 sonucu, gün kümelenmiş t.
+- Başarı kuralı: İki yılda da net R > 0; t ≥ 2 (v6) ve topluluk adaylarında 2026'da t ≥ 3 (13 aday, çoklu test).
+- Motorun numba sürümü, `sinyal_v6.py`'deki vektörel sürümle BTC'de üç ayarda birebir aynı işlem sayısını ve net R'yi verdi.
+
+**v6 sinyali** (AL: yeni sert satış mumu, z15 ≤ −3; SAT: yeni sert alış mumu; seçilen ayar limit giriş, k 2, R 2, H 5):
+
+| | 2025 | 2026 |
+|---|---|---|
+| İşlem | 21.733 | 16.789 |
+| Brüt (bp / işlem) | −0,47 | −1,72 |
+| Brüt AL / SAT (bp) | +1,76 / −2,54 | −0,85 / −2,49 |
+| Net, VIP 0 (bp / işlem) | −8,46 | −9,72 |
+| Net R, VIP 0 (t) | −0,066 (−11,1) | −0,078 (−13,1) |
+| Net R, düşük ücret | −0,032 | −0,040 |
+
+- **Kural tutmadı.** 54 ayarın hiçbiri iki yılda da net pozitif değil.
+- Piyasa girişinde AL tarafının brütü pozitif (+1,4 ile +3,8 bp 2025, +0,8 ile +2,7 bp 2026); bu, turuncu uyarının dayandığı etkinin aynısı. SAT tarafı 0 ile −4 bp. Etki maliyetin (8–12 bp) çok altında.
+- Limit giriş komisyonu düşürür ama ters seçim yüzünden brütü 2–3 bp kötüleştirir (bölüm 3'teki `h1sim.py` bulgusuyla aynı). Net sonuçta limit giriş yine de biraz daha az kaybettiriyor; seçim bu yüzden limit oldu.
+
+**Topluluk göstergeleri** (varsayılan girdiler; sinyal yalnızca kapanmış mumda):
+
+| Gösterge | Sinyal | Seçilen ızgara ayarı: net R 2025 / 2026 (net bp) | Yerel çıkış: net bp 2025 / 2026 | Piyasa girişinde en iyi brüt (bp) |
+|---|---|---|---|---|
+| Supertrend (10, 3) | Trend dönüşü | −0,109 / −0,126 (−8,8 / −9,2) | −12,5 / −13,2 | +0,5 / +0,3 |
+| Squeeze Momentum [LazyBear] | Sıkışma biter, momentum yönünde | −0,112 / −0,134 | −12,5 / −12,3 | −0,1 / −0,1 |
+| CM MACD Ult MTF (12, 26, 9) | MACD / sinyal kesişimi | −0,111 / −0,121 | −12,3 / −12,0 | +0,2 / +0,7 |
+| CM Williams Vix Fix | Yeşil çubuğun ilk mumu (AL) | −0,110 / −0,125 | — | +0,2 / +0,3 |
+| S/R Levels with Breaks [LuxAlgo] | Hacimli kırılım | −0,101 / −0,125 | — | 0,0 / +0,2 |
+| Market Structure Break [EmreKb] | MSB | −0,107 / −0,133 | −12,1 / −13,4 | +0,2 / 0,0 |
+| WaveTrend [LazyBear] | Aşırı bölgede kesişim | −0,101 / −0,116 | −12,1 / −12,0 | +0,6 / +0,6 |
+| UT Bot Alerts (1, 10) | Buy / Sell | −0,111 / −0,126 | −12,2 / −12,4 | 0,0 / +0,3 |
+| Trendlines with Breaks [LuxAlgo] | Trend çizgisi kırılımı | −0,110 / −0,129 | — | +0,5 / +0,1 |
+| Support Resistance Channels [LonesomeTheBlue] | Kanal kırılımı | −0,110 / −0,131 | — | +0,2 / −0,1 |
+| ADX and DI | DI kesişimi, ADX > 20 | −0,111 / −0,128 | −12,8 / −12,5 | +0,1 / +0,4 |
+| High Volume Boxes [ChartPrime] | Kutu kırılımı | −0,109 / −0,129 | — | +0,1 / −0,2 |
+| Aynı gösterge | Kutu tutması | −0,113 / −0,126 | — | 0,0 / +0,3 |
+| ICT Killzones & Pivots [TFO] | Seans tepe/dip kırılımı (devam) | −0,092 / −0,126 | — | +0,9 / −0,9 |
+
+- **Hiçbiri kuralı geçmedi.** Hepsinde t −11 ile −75 arasında; işlem başına net zarar 8–13 bp.
+- Piyasa girişindeki en iyi brüt bile 1 bp'yi geçmiyor (v6 sinyalinde +1,2–1,7 bp). Yani bu göstergeler 1 dk grafikte yön bilgisi vermiyor; zarar neredeyse tamamen komisyon ve kaymadan geliyor. Bu, bölüm 6'daki (48 yerleşik gösterge) sonuçla aynı.
+- Yerel çıkışlar (ters sinyale kadar tutma) daha kötü, çünkü her dönüşte iki taker maliyeti ödeniyor.
+- Pine'dan Python'a uyarlamalar TradingView çıktısıyla karşılaştırılamadı. Pivot eşitlik kuralı (sol taraf kesin, sağ taraf eşitliğe izin verir) ve `ta.change` geçmişi Pine belgelerine göre yorumlandı.
+- Test edilmeyenler: Smart Money Concepts [LuxAlgo] (bölüm 12'de iki bağımsız portla test edildi), Sessions [LuxAlgo] (sinyal yok; seans tepe/dip ve VWAP seviyeleri bölüm 7 ve 9'daki seviye testleriyle aynı sınıf).
+
+**Karar (ön kayıt):**
+- Topluluk göstergelerinden VSP'ye hiçbir öğe eklenmedi.
+- VSP'nin AL/SAT'ı kullanıcı isteğiyle v6 sinyalidir: limit giriş, stop 2 × σ15, hedef 2R, en fazla 5 dk. Kural geçmediği için kartlarda beklenen net sonuç (işlem başına yaklaşık −0,07 / −0,08 R) açıkça yazılır.
+- Pozisyon büyüklüğü: stopta kaybedilen tutar (mesafe + giriş ve stop çıkışı maliyeti) = bakiye × risk %.

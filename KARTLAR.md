@@ -1,11 +1,26 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v5.7.1)
+## Tanım Kartı (v6.0.0)
 
 **Ne yapar:**
-- 1 dakikalık kripto vadeli grafikte **piyasayı anlatır**.
-- AL/SAT sinyali, stop ya da pozisyon önerisi vermez. Nereden alıp satacağınıza ve stopunuza siz karar verirsiniz.
-- Grafikte tablo ya da kutu yoktur. Bilgi üç yoldan verilir: durum satırı, arka plan rengi ve çizgiler.
+- 1 dakikalık kripto vadeli grafikte **AL/SAT sinyali, stop, hedef ve pozisyon büyüklüğü önerir** ve piyasayı anlatır.
+- Grafikte tablo ya da kutu yoktur. Bilgi dört yoldan verilir: AL/SAT etiketi ve stop/hedef çizgileri, durum satırı, arka plan rengi, seviye çizgileri.
+- **Önemli:** Testte AL/SAT sinyali komisyon ve kaymadan sonra **net zarar** verdi (aşağıda "Dayanak" ve "Dürüst Not"). Sinyal, en tutarlı ölçülen etkiye dayanan en iyi aday olduğu için gösterilir; kâr beklentisi yoktur.
+
+**AL/SAT (mum kapanışında, geriye dönük değişmez):**
+
+| Etiket | Ne zaman | Beklenti |
+|---|---|---|
+| **AL** (yeşil, mumun altında) | Son 15 dakikada sert düşüş (z ≤ −3) ve satış akışı; önceki 15 dakikada benzeri yok | Kısa vadeli geri dönüş (yukarı) |
+| **SAT** (kırmızı, mumun üstünde) | Son 15 dakikada sert yükseliş (z ≥ +3) ve alış akışı | Kısa vadeli geri dönüş (aşağı) |
+
+- **Giriş:** Varsayılan limit emir, sinyal mumunun kapanış fiyatından. Yalnızca sonraki mumda fiyat bu seviyenin ötesine geçerse dolmuş sayılır. Ayarlardan piyasa emrine geçilebilir.
+- **Stop:** Girişten 2 × (15 dk oynaklık) uzakta (kırmızı çizgi).
+- **Hedef:** Stop mesafesinin 2 katı (yeşil çizgi).
+- **Süre:** En fazla 5 dakika; hedef ya da stop gelmezse 5. mumun kapanışında çıkılır.
+- **Miktar:** Etiketin altındaki sayı. Stopta kaybedilecek tutar (mesafe + komisyon + kayma), bakiyenizin risk yüzdesi kadar olur. Etiketin üstüne gelince giriş, stop, hedef, pozisyon değeri ve kaldıraç görünür.
+- **Sinyal verilmeyen anlar:** Zamanlanmış olay 15 dakika içindeyse ya da sürüyorsa (stop ölçeği o anlarda güvenilmez), tipik 15 dk hareket maliyeti karşılamıyorsa ve açık işlem varken.
+- **Veri Penceresi'nde:** Stop, hedef, stop mesafesi %, şimdi girilse önerilen miktar ve pozisyon değeri, grafikteki AL/SAT işlemlerinin sayısı ve ortalama net R'si (maliyet dahil).
 
 **Durum satırı (gösterge adının yanında, soldan sağa):**
 
@@ -54,6 +69,13 @@
 - Büyük paritelerde (BTC, ETH, SOL) gerçek yarım makas 0,005–0,5 baz puan. Varsayılan %0,01 kayma orada makastan çok gecikme ve emir büyüklüğü payıdır.
 
 **Dayanak (22 Binance vadeli paritesi, 21 ay; 2025 keşif, 2026 doğrulama):**
+- **AL/SAT (v6.0, ön kayıtlı test):**
+  - Varsayılan ayarlar 54 ayar arasından yalnızca 2025 verisiyle seçildi (limit giriş, stop 2σ, hedef 2R, 5 dk).
+  - İşlem başına net sonuç (VIP 0 komisyon: maker %0,02, taker %0,05, kayma %0,01): 2025'te **−8,5 bp (−0,07 R)**, 2026'da **−9,7 bp (−0,08 R)**. Düşük ücretle (maker %0, taker %0,02) −3,5 / −4,7 bp.
+  - Brüt (komisyon öncesi): AL +1,8 / −0,9 bp, SAT −2,5 / −2,5 bp. Piyasa girişinde AL tarafı +1 ile +4 bp brüt kazandırıyor, ama bu maliyetin çok altında.
+  - Ön kayıtlı başarı kuralı (iki yılda da net kâr ve istatistiksel güven) geçilmedi. 54 ayarın hiçbiri iki yılda da net pozitif değil.
+  - Yani her 100 işlemde, işlem başına %0,5 risk alan bir hesap ortalama yaklaşık **%3,5–4** kaybeder (gerçek sonuç bu ortalamanın çevresinde dağılır).
+- **Gönderilen 13 topluluk göstergesi** (Supertrend, UT Bot, CM MACD, WaveTrend, Squeeze Momentum, Williams Vix Fix, ADX/DI, LuxAlgo S/R Breaks ve Trendlines, MSB-OB, SR Channels, ChartPrime HV Boxes, TFO Killzones) aynı motorla sınandı. Hepsi işlem başına 8–13 bp net zarar verdi; brüt yön bilgisi 1 bp'nin altında. VSP'ye eklenmedi. LuxAlgo SMC daha önce test edilmişti; Sessions [LuxAlgo] sinyal içermiyor.
 - **Beklenen hareket:**
   - 15 dakikalık gerçek hareketlerin %50'si öngörülen oynaklığın 0,61 katı içinde kalır, %80'i 1,23 katı içinde.
   - Bu katsayılar 1–240 dk ufukların hepsinde %10'dan az sapar.
@@ -82,7 +104,7 @@
   - OI, baz/prim, piyasa genişliği ve dominans.
   - "Coine özel / piyasa geneli" ayrımı.
   - v5.7: Mumlardan makas tahmini (EDGE; büyük paritelerde makası 10–14 kat fazla gösteriyor), olay anında makas çarpanı (gerçek makas olay anlarında çoğunlukla yalnızca ×1,0–1,1 açılıyor), Deribit Cuma vadesi (×0,9–1,3), başabaş ufku (hareket / maliyetle aynı bilgi).
-  - Hiçbiri 1 dakikalık grafikte maliyeti aşan ya da tutarlı bilgi vermedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 6–13.
+  - Hiçbiri 1 dakikalık grafikte maliyeti aşan ya da tutarlı bilgi vermedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 6–14.
 - **Sürekli izleme:** Her bulgu ay ay yeniden ölçülür (`arastirma/IZLEME.md`). Ekim 2026 itibarıyla göstergedeki tüm özellikler "TUTUYOR".
 
 ## Talimat Kartı
@@ -90,30 +112,38 @@
 1. Kodu almak için GitHub'da dosyanın **Raw** sayfasını açın. **Ctrl+A** ve **Ctrl+C** ile kopyalayın. Pine Düzenleyici'de **Ctrl+A** ve **Ctrl+V** ile yapıştırın. Son satırda `// VSP SONU` yazısını görmelisiniz.
 2. **Kaydet**'e, ardından **Grafiğe ekle**'ye basın. Gösterge alt bölmede açılırsa sağ tıklayıp **Taşı (Move to) → Yukarıdaki mevcut bölme (Existing pane above)** seçeneğini kullanın.
 3. Gösterge yalnızca **1 dakikalık** grafikte çalışır; başka zaman diliminde hata mesajı verir.
-4. Ayarlar → **Maliyet** bölümünde borsanızın maker ve taker komisyonlarını, kaymayı ve girişte kullandığınız emir tipini girin.
-   - Bu bilgiler yalnızca "Hareket / maliyet" değeri için kullanılır.
+4. Ayarlar → **AL/SAT, stop ve pozisyon** bölümünde hesap bakiyenizi (USDT) ve işlem başına risk yüzdesini girin.
+   - Etiketteki miktar bu iki değerden hesaplanır: stop gelirse kaybınız, maliyet dahil, bakiye × risk % olur.
+   - Stop (oynaklığın katı), hedef (R) ve en uzun tutma süresi de buradan değiştirilebilir. Varsayılanlar testte seçilen değerlerdir; değiştirirseniz kartlardaki test sonuçları geçerli olmaz.
+   - Sinyalleri bu bölümdeki **AL/SAT sinyalleri** kutusundan kapatabilirsiniz.
+5. Ayarlar → **Maliyet** bölümünde borsanızın maker ve taker komisyonlarını, kaymayı ve girişte kullandığınız emir tipini girin.
+   - Bu bilgiler "Hareket / maliyet" değerinde, miktar hesabında ve grafikteki işlemlerin net sonucunda kullanılır.
    - Girdiğiniz kayma yarım tick'ten küçükse gösterge yarım tick'i kullanır. Kullanılan değeri Veri Penceresi'nde görebilirsiniz.
-5. Ayarlar → **Piyasa koşulu** bölümünde beklenen hareket ufkunu seçin (varsayılan 15 dk). 1 dk seçilirse hareket neredeyse her zaman maliyetin altında görünür.
-6. **Durum satırı:** Gösterge adının yanındaki dört sayıyı okuyun.
+6. Ayarlar → **Piyasa koşulu** bölümünde beklenen hareket ufkunu seçin (varsayılan 15 dk). 1 dk seçilirse hareket neredeyse her zaman maliyetin altında görünür.
+7. **AL/SAT etiketi:** Mum kapandığında çıkar. Etiketin üstüne gelin; giriş, stop, hedef, miktar, pozisyon değeri ve kaldıraç görünür. Stop ve hedef çizgileri işlem bitene kadar grafikte kalır.
+8. **Durum satırı:** Gösterge adının yanındaki dört sayıyı okuyun.
    - Beklenen hareket sayıları **sarıysa** yakında ya da şu anda zamanlanmış bir olay var; gerçek hareket gösterilenden geniş olabilir.
    - Sayılar görünmüyorsa: Grafik ayarları → **Durum satırı** → **Gösterge değerleri** kutusunu işaretleyin.
    - Ek değerler için sağ kenar çubuğundaki **Veri Penceresi**'ni açın.
-7. **Arka plan:**
+9. **Arka plan:**
    - Mor: Oynaklık olağandışı; fiyat normalden sert oynar.
    - Kırmızı: FOMC'nin ilk dakikaları ya da CPI/NFP günü 08:30 mumu.
    - Turuncu: O mumda SHORT kovalamak ortalamada dezavantajlı başlar.
    - Arka planlar Ayarlar → **Görünüm** bölümünden kapatılabilir.
-8. **Stil:** Çizgiler varsayılan olarak en kalın ve açık renklidir. Ayarlar → **Stil** sekmesinden değiştirebilirsiniz.
-9. **Alarmlar:**
-   - Koşul VSP → "Sert satış akışı" ya da "Olağandışı oynaklık".
+10. **Stil:** Çizgiler varsayılan olarak en kalın ve açık renklidir. Ayarlar → **Stil** sekmesinden değiştirebilirsiniz.
+11. **Alarmlar:**
+   - Koşul VSP → "AL", "SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
    - Alarmlar yalnızca mum kapanışında tetiklenir.
    - **Not:** TradingView ücretsiz planında gösterge alarmları büyük olasılıkla kullanılamaz.
-10. **Güncelleme:** CPI/NFP tarih listesi 10 Aralık 2026'da biter. Yeni sürüm çıktığında 1. adımı tekrarlayın.
+12. **Güncelleme:** CPI/NFP tarih listesi 10 Aralık 2026'da biter. Yeni sürüm çıktığında 1. adımı tekrarlayın.
 
 ## Dürüst Not
 
 - Hiçbir gösterge kâr garantisi vermez.
-- 22 parite ve 21 aylık testlere göre, test edilen hiçbir gösterge 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor. VSP de yön söylemez; hareketin büyüklüğünü, maliyetle ilişkisini ve olağandışı anları gösterir.
+- **VSP'nin AL/SAT sinyali testte net zarar verdi:** işlem başına yaklaşık −0,07 / −0,08 R (−8,5 / −9,7 bp). Sinyali takip etmek, ortalamada hesabı küçültür. Kayıp büyük ölçüde komisyon ve kaymadan gelir; brüt etki 1–2 bp, maliyet 8–12 bp.
+- 22 parite ve 21 aylık testlere göre, test edilen hiçbir gösterge (48 yerleşik gösterge, LuxAlgo SMC ve gönderilen 13 topluluk göstergesi dahil) 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
+- Veri Penceresi'ndeki "grafikteki işlemlerin ortalama net R'si" yalnızca grafikte yüklü yaklaşık 3,5 günü kapsar (birkaç düzine işlem). Bu kadar az işlemle sonuç çok oynaktır; birkaç günlük kâr ya da zarar kartlardaki uzun dönem sonucunu değiştirmez.
+- Gösterge sinyallerin işlem sonucunu mum verisiyle (yüksek/düşük) hesaplar. Aynı mumda stop ve hedef birlikte değmişse önce stop sayılır. Gerçek dolum, makas ve kayma farklı olabilir.
 - Turuncu uyarının etkisi küçüktür ve maliyetin (8–12 baz puan) altındadır. Bir işlem fırsatı değil, "o mumda girersen ortalamada geride başlarsın" bilgisidir.
 - Tahmini delta, gerçek taker deltasıyla yaklaşık 0,67 korelasyonludur; birebir aynı değildir.
 - Oynaklık çarpanları ortalamadır. Gösterge yalnızca CPI ve NFP tarihlerini bilir; PPI, GSYH gibi diğer 08:30 verilerini ayırt etmez.

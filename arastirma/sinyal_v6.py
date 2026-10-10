@@ -172,7 +172,7 @@ def main():
                 for H in HS:
                     for sen in SEN:
                         df = pd.concat([islem(E, k, R, H, giris, sen) for E in EV], ignore_index=True)
-                        df["yil"] = pd.to_datetime(df["ts"], unit="s", utc=True).year
+                        df["yil"] = pd.to_datetime(df["ts"], unit="s", utc=True).dt.year
                         sonuc[(giris, k, R, H, sen)] = df
                         for yil in (2025, 2026):
                             o = ozet(df[df["yil"] == yil])
