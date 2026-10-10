@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.1.0)
+## Tanım Kartı (v6.2.0)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
@@ -59,10 +59,11 @@
 - **CPI/NFP tarihleri 10 Aralık 2026'ya kadar tanımlıdır.** Sonrasında 08:30 yalnızca mor kalır (eski davranış). Resmî 2027 takvimi yayımlanınca liste güncellenecek.
 
 **Çizgiler (en kalın, açık renk):**
+- **SMA20 (yönüne göre yeşil / kırmızı):** Rengin döndüğü an ve fiyatın çizgiyi mum içinde kesmesi, 22 paritede iki yılda da küçük ama tutarlı brüt kazanç verdi (yön dönüşü +0,5 / +0,3 bp, kesişim +0,2 / +0,2 bp). VSP AL'ın (+3,7 / +1,4 bp) onda biri kadar; ana sinyal değil, yön bilgisi. Ayarlar → Görünüm'den kapatılabilir.
 - VWAP (sarı, düz) ve ±2σ bantları (açık sarı, kesik).
 - Önceki gün yüksek/düşük (beyaz, noktalı).
 - Asya seansı yüksek/düşük (açık mor, kesik).
-- Bu çizgiler yalnızca bilgi içindir; testlerde hiçbiri rastgele seviyelerden daha iyi tutmadı.
+- Seviye çizgileri (VWAP, önceki gün, Asya) yalnızca bilgi içindir; testlerde hiçbiri rastgele seviyelerden daha iyi tutmadı.
 
 **Maliyet:**
 - Kayma en az **yarım tick** alınır. Makas 1 tick'in altına inemez; tick'i kaba, ucuz coinlerde yarım tick 2–4 baz puana çıkabilir. Gösterge grafiğin kendi tick'ini okur.
@@ -78,6 +79,7 @@
   - Brüt (komisyon öncesi): AL +1,8 / −0,9 bp, SAT −2,5 / −2,5 bp. Piyasa girişinde AL tarafı +1 ile +4 bp brüt kazandırıyor, ama bu maliyetin çok altında.
   - Ön kayıtlı başarı kuralı (iki yılda da net kâr ve istatistiksel güven) geçilmedi. 54 ayarın hiçbiri iki yılda da net pozitif değil.
   - Yani her 100 işlemde, işlem başına %0,5 risk alan bir hesap ortalama yaklaşık **%3,5–4** kaybeder (gerçek sonuç bu ortalamanın çevresinde dağılır).
+- **Gönderilen topluluk göstergeleri, katkı testi (sinyal, filtre, bilgi; komisyonsuz):** Birinci grupta 11 sinyal adayından yalnızca CM Ultimate MA'nın SMA20 sinyalleri geçti (SMA20 çizgisi olarak eklendi). 31 durumun hiçbiri VSP AL/SAT'ı tutarlı biçimde iyileştirmedi ya da oynaklık tahminine katkı vermedi. Ayrıntı: `arastirma/BULGULAR.md` bölüm 15.
 - **Gönderilen 13 topluluk göstergesi** (Supertrend, UT Bot, CM MACD, WaveTrend, Squeeze Momentum, Williams Vix Fix, ADX/DI, LuxAlgo S/R Breaks ve Trendlines, MSB-OB, SR Channels, ChartPrime HV Boxes, TFO Killzones) aynı motorla sınandı. Hepsi işlem başına 8–13 bp net zarar verdi; brüt yön bilgisi 1 bp'nin altında. VSP'ye eklenmedi. LuxAlgo SMC daha önce test edilmişti; Sessions [LuxAlgo] sinyal içermiyor.
 - **Beklenen hareket:**
   - 15 dakikalık gerçek hareketlerin %50'si öngörülen oynaklığın 0,61 katı içinde kalır, %80'i 1,23 katı içinde.

@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v6.1.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v6.2.0 | 1 dakika piyasa gostergesi
 // Kullanicinin istegiyle AL/SAT, stop, hedef ve pozisyon buyuklugu onerisi geri geldi (v6.0). Grafikte tablo ya da kutu yoktur. Bilgi dort yoldan verilir:
 //   1) AL/SAT etiketi (mum kapanisinda): dipten al, tepeden sat. Sert 15 dk dususten sonra AL, sert 15 dk yukselisten sonra SAT (geri donus). Stop ve hedef cizgileri, etikette miktar.
 //      Dayanak: arastirmada tutarli cikan tek yon etkisi (BULGULAR 3, 10c, 14). v6.1: kullanici komisyonu onemsemiyor; ayarlar komisyonsuz (brut) 2025 sonucuyla secildi:
@@ -9,8 +9,8 @@
 //   3) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
 //      kirmizi = FOMC aciklamasinin ilk dakikalari ve CPI / Istihdam Raporu (NFP) gunlerinde 08:30 ET mumu;
 //      turuncu = sert satis akisinin hemen ardindaki mum (bu mumda SHORT kovalamak ortalamada dezavantajli).
-//   4) Cizgiler: VWAP ve +-2 sigma bantlari, onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Yalnizca bilgi icindir;
-//      testlerde hicbiri rastgele seviyelerden daha iyi tutmadi.
+//   4) Cizgiler: SMA20 (yonune gore yesil/kirmizi; renk donusu kucuk ama tutarli bir sinyal), VWAP ve +-2 sigma bantlari,
+//      onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Seviye cizgileri yalnizca bilgi icindir; testlerde rastgele seviyelerden daha iyi tutmadi.
 // Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10-14).
 indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
 
@@ -40,6 +40,7 @@ grpV = "Görünüm"
 showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, display = display.none)
 showVolBg  = input.bool(true, "Olağandışı oynaklıkta arka plan", group = grpV, display = display.none)
 showFlowBg = input.bool(true, "Sert satış akışından sonra arka plan", group = grpV, display = display.none)
+showSma    = input.bool(true, "SMA20 (yönüne göre renk)", group = grpV, display = display.none)
 
 // Karanlik mod icin acik renkler
 cVwap   = #FFD54F
@@ -280,6 +281,11 @@ if buySig or sellSig
     label.new(bar_index, d > 0 ? low : high, (d > 0 ? "AL" : "SAT") + "\n" + str.tostring(qtyNow, "#.####"), style = d > 0 ? label.style_label_up : label.style_label_down, color = d > 0 ? cBuy : cSell, textcolor = color.black, size = size.small, tooltip = tip)
 tradeOn = pos != 0 or pend != 0 or exitNow
 
+// SMA20 yonu (CM Ultimate MA, yumusatma 2): yesil yukari, kirmizi asagi. Renk donusu ve fiyatin cizgiyi mum icinde kesmesi
+// iki yilda da kucuk ama tutarli brut kazanc verdi (+0,5 / +0,3 bp ve +0,2 / +0,2 bp; arastirma/katki_testi.py, BULGULAR 15).
+sma20 = ta.sma(close, 20)
+smaUp = sma20 >= sma20[2]
+
 // === Cizimler (en kalin, acik renkler) ===
 // Gun degisiminde (00:00 UTC) ilk mumda cizgi kesilir; boylece eski ve yeni gun degerleri dikey bir cizgiyle birlesmez
 dayOn = showLevels and not newDay
@@ -290,6 +296,7 @@ plot(dayOn ? pdh : na, "Önceki gün yüksek", cDay, 4, plot.style_linebr, lines
 plot(dayOn ? pdl : na, "Önceki gün düşük", cDay, 4, plot.style_linebr, linestyle = plot.linestyle_dotted, display = display.pane)
 plot(showLevels ? asiaHi : na, "Asya yüksek", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 plot(showLevels ? asiaLo : na, "Asya düşük", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
+plot(showSma ? sma20 : na, "SMA20", smaUp ? cGood : cBad, 4, display = display.pane)
 plot(tradeOn ? stopP : na, "Stop", cSell, 3, plot.style_linebr, display = display.pane + display.data_window)
 plot(tradeOn ? tgtP : na, "Hedef", cBuy, 3, plot.style_linebr, display = display.pane + display.data_window)
 

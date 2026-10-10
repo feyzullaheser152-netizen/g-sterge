@@ -663,3 +663,27 @@ Kullanıcı, v5.0'da kaldırılan AL/SAT, stop ve pozisyon önerisini geri isted
 - Seçilen: piyasa girişi, k 2, R 2, H 5. Brüt bp / işlem (2025 / 2026): toplam +1,66 / +0,45; AL +3,78 / +1,42; SAT −0,33 / −0,43.
 - Göstergede hareket / maliyet engeli kaldırıldı; komisyon ayarları sinyali etkilemez. Giriş varsayılanı piyasa emri oldu (limit giriş ters seçim yüzünden brütü 2–3 bp kötüleştiriyor).
 - Makas (yarım tick) bu brüt rakamlara dahil değil; büyük paritelerde 0,01–0,5 bp, tick'i kaba paritelerde 2–4 bp olabilir.
+
+## 15. Topluluk göstergelerinin katkısı, birinci grup (`katki_testi.py`; sinyal, filtre, bilgi)
+
+Kullanıcı: "Özgün bir gösterge oluşturuyoruz; katkısı olacak her şeyi kullanmamız gerekir. AL/SAT dışında bilmem gereken şeyleri de görmek isterim." Komisyon sıfır (14b). Ön kayıt sonuçlardan önce commit'lendi.
+
+**A) Sinyal** (54 ayarlık ızgara, 2025 seçim, 2026 doğrulama; kural: 2025 R > 0, t ≥ 2; 2026 R > 0, t ≥ 3):
+
+| Aday | Seçilen ayar | Brüt bp 2025 / 2026 | R (t) 2025 / 2026 | Sonuç |
+|---|---|---|---|---|
+| CM Ultimate MA: SMA20 yön dönüşü | piyasa, k 1, R 2, H 15 | +0,51 / +0,32 | 0,012 (3,2) / 0,012 (3,1) | **Geçti** |
+| CM Ultimate MA: fiyat SMA20'yi mum içinde keser | piyasa, k 1, R 2, H 15 | +0,20 / +0,19 | 0,008 (2,7) / 0,009 (3,5) | **Geçti** |
+| Order Block Finder [wugamlo] | piyasa, k 1, R 2, H 30 | +0,29 / +0,46 | 0,009 (1,98) / 0,014 (2,5) | Kıl payı geçmedi |
+| Nadaraya-Watson Envelope (repaint kapalı) | piyasa, k 2, R 2, H 30 | +0,53 / +0,90 | 0,004 (0,7) / 0,012 (2,2) | Geçmedi |
+| Order Block Detector [LuxAlgo] | | +0,31 / −0,12 | (3,6) / (0,1) | Geçmedi |
+| SMA 20/50 kesişimi, TMA trend, 3 Line Strike, yutan mum, Lorentzian, Liquidity Swings | | −0,5 ile +0,8 | | Geçmedi |
+
+- Geçen iki sinyalin kazancı tutarlı ama küçük: VSP AL sinyalinin (+3,7 / +1,4 bp) yaklaşık onda biri. Çok sık geliyor (parite başına günde onlarca).
+- Yerel çıkışlarla (ters sinyale kadar tutma) aynı sinyaller negatif.
+- **Uygulama (v6.2):** Yöne göre renk değiştiren SMA20 çizgisi (CM Ultimate MA görünümü). Renk dönüşü ve fiyatın çizgiyi kesmesi bu iki sinyalin kendisi; etiket konmadı (grafiği doldururdu).
+
+**B) Filtre** (VSP AL/SAT işlemleri, v6.1 varsayılanları; 31 durum): Hiçbiri kabul edilmedi.
+- Örnek: Supertrend, UT Bot, MACD, Lorentzian tahmini ve çekirdek eğimi, Squeeze, ADX, killzone'lar, order block ve likidite bölgeleri: farklar bir yıl pozitif, ertesi yıl negatif ya da kapsam çok dar (VSP AL sert düşüşten sonra geldiği için trend göstergeleri neredeyse her zaman ters yönde).
+
+**C) Oynaklık bilgisi:** Hiçbir durum R² artışında 0,005'e ulaşmadı. En yüksek: Squeeze açık 0,0009 / 0,0027; NY sabah killzone 0,0010 / 0,0012.
