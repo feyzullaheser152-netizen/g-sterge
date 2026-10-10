@@ -1,12 +1,13 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.4.2)
+## Tanım Kartı (v6.4.3)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
 - Grafikte tablo ya da kutu yoktur. Bilgi dört yoldan verilir: AL/SAT etiketi ve stop/hedef çizgileri, durum satırı, arka plan rengi, seviye çizgileri.
 - Sinyal, dip ya da tepe oluştuktan sonra mum kapanışında gelir; geriye dönük değişmez. Dibi önceden bilen (repaint yapmayan) bir gösterge yoktur.
 - **Renk kuralı:** Destek niteliğindeki her şey **yeşil**, direnç niteliğindeki her şey **kırmızı**. Çizimler varsayılan olarak **%50 parlaklıkta**.
+- **Adlar:** Her öğenin hemen sağında, küçük beyaz yazıyla (%50 parlaklık) ne olduğu yazar.
 
 **AL/SAT (mum kapanışında, geriye dönük değişmez):**
 
@@ -72,6 +73,12 @@
 | Etiket ve işaretler | AL, pozitif uyumsuzluk, yukarı ok | SAT, negatif uyumsuzluk, aşağı ok | |
 
 - Fiyat bir seviyeyi kırınca rengi kendiliğinden değişir; örneğin kırılan önceki gün yükseği kırmızıdan yeşile döner (direnç desteğe dönüşür).
+- **Adlar (küçük beyaz yazı, %50 parlaklık):**
+  - Çizgilerin adı son mumdaki uçlarının hemen sağında: VWAP, VWAP +2σ, VWAP −2σ, Önceki gün yüksek / düşük, Asya yüksek / düşük, SMA20, Yükselen / Düşen trend çizgisi, Stop, Hedef. Önceki günlerin seviye parçaları ve biten işlemlerin stop/hedef noktaları da bittikleri yerde adlandırılır.
+  - Trend kırılımı oklarının adı her okun hemen sağında: Trend kırılımı AL, Trend kırılımı SAT.
+  - Uyumsuzluk üçgenleri çok sık (3,5 günde ~450); hepsine yazı grafiği kaplar ve TradingView'in 500 etiket sınırını aşar (eski AL/SAT etiketleri silinirdi). Bu yüzden yalnızca son yeşil ve son kırmızı üçgenin yanında ad yazar: Uyumsuzluk (+), Uyumsuzluk (−). Eskiler aynı şekil ve renkte.
+  - Arka planların adı her bloğun başında: Olağandışı oynaklık, FOMC, CPI/NFP 08:30, SHORT kovalama riski. Bir blok başka birinin hemen ardından başlarsa adı üst üste binmesin diye mumun altına yazılır.
+  - AL/SAT etiketi zaten yazı olduğu için ayrıca adlandırılmaz. Adlar Ayarlar → Görünüm → "Öğe adları" ile kapatılabilir.
 - **Stop kırmızı, hedef yeşil** kalır ve seviyelerle karışmasın diye noktalı çizilir. Bunlar işlem seviyesidir, destek/direnç değildir; AL işleminde stop altta kırmızı, hedef üstte yeşil görünür.
 - **Parlaklık:** Bütün çizimler varsayılan olarak %50 parlaklıkta (Ayarlar → Görünüm → Çizim parlaklığı, %10–100). Arka planlar da aynı oranda soluklaşır. Durum satırındaki sayılar okunabilsin diye tam parlaklıkta; AL/SAT etiketindeki yazı beyaz.
 - **SMA20:** Testte mumun SMA20'yi kesmesi (açılış bir yanda, kapanış öbür yanda) iki yılda da küçük ama tutarlı brüt kazanç verdi (+0,2 / +0,2 bp); renk dönüşü bu kesişime yakındır. Bu kazanç VSP AL'ın (+3,8 / +1,4 bp) onda biri kadar; ana sinyal değil. SMA20'nin yön dönüşü (+0,5 / +0,3 bp, iki SMA20 bulgusundan güçlüsü) v6.4.2'den beri gösterilmiyor; izlemede son 12 ayda t ≥ 3 olursa ayrı işaretle geri alınacak. Ayarlar → Görünüm'den kapatılabilir.
@@ -159,7 +166,7 @@
    - Koyu mor: FOMC'nin ilk dakikaları ya da CPI/NFP günü 08:30 mumu (en sert anlar).
    - Turuncu: O mumda SHORT kovalamak ortalamada dezavantajlı başlar.
    - Arka planlar Ayarlar → **Görünüm** bölümünden kapatılabilir.
-10. **Renk ve parlaklık:** Destek yeşil, direnç kırmızı; çizimler varsayılan olarak %50 parlaklıkta. Parlaklığı Ayarlar → **Görünüm** → **Çizim parlaklığı** ile değiştirebilirsiniz. Tek tek çizgileri Ayarlar → **Stil** sekmesinden değiştirmeyin; renkler fiyatın konumuna göre otomatik değişir.
+10. **Renk, parlaklık ve adlar:** Destek yeşil, direnç kırmızı; çizimler varsayılan olarak %50 parlaklıkta. Her öğenin sağında küçük beyaz yazıyla adı yazar; kalabalık gelirse Ayarlar → **Görünüm** → **Öğe adları** kutusundan kapatın. Parlaklığı Ayarlar → **Görünüm** → **Çizim parlaklığı** ile değiştirebilirsiniz. Tek tek çizgileri Ayarlar → **Stil** sekmesinden değiştirmeyin; renkler fiyatın konumuna göre otomatik değişir.
 11. **Alarmlar:**
    - Koşul VSP → "AL", "SAT", "Trend çizgisi kırılımı AL", "Trend çizgisi kırılımı SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
    - Alarmlar yalnızca mum kapanışında tetiklenir.
