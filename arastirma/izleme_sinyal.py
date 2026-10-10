@@ -5,9 +5,10 @@ Sinyaller ve ayarlari, eklendikleri testteki secilmis ayarlarla aynidir (komisyo
   SMA20 donusu     : CM Ultimate MA, SMA20 yonu donunce; piyasa, k 1, R 2, H 15.
   SMA20 kesisimi   : mum SMA20'yi icinde keser (acilis bir yanda, kapanis diger yanda); piyasa, k 1, R 2, H 15.
   Uyumsuzluk       : Divergence for Many Indicators v4 (10 gosterge); piyasa, k 1, R 2, H 30.
+  Trend cizgisi    : Trend Lines v2 cizgi kirilimi (k3_seviye.tlb2; BULGULAR 17); piyasa, k 1, R 2, H 30. Ayrica SAT oku ayri izlenir.
 Durum kurali (ON KAYIT, sonuclardan once yazildi; son 12 tam ay, gun kumelenmis t):
   VSP AL ve VSP SAT: brut >= +1 bp ve t >= 2 TUTUYOR; brut > 0 ZAYIFLADI; brut <= 0 BOZULDU.
-  SMA20 donusu, SMA20 kesisimi, Uyumsuzluk: brut > 0 ve t >= 2 TUTUYOR; brut > 0 ZAYIFLADI; brut <= 0 BOZULDU.
+  SMA20 donusu, SMA20 kesisimi, Uyumsuzluk, Trend cizgisi (ve SAT oku): brut > 0 ve t >= 2 TUTUYOR; brut > 0 ZAYIFLADI; brut <= 0 BOZULDU.
 """
 import os, sys
 from multiprocessing import Pool
@@ -18,9 +19,10 @@ import sinyal_v6
 import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
+import k3_seviye
 from topluluk_sinyal import sma, ema, highest, lowest, pivot
 
-SINYALLER = [("VSP AL", 1.0), ("VSP SAT", 1.0), ("SMA20 dönüşü", 0.0), ("SMA20 kesişimi", 0.0), ("Uyumsuzluk", 0.0)]
+SINYALLER = [("VSP AL", 1.0), ("VSP SAT", 1.0), ("SMA20 dönüşü", 0.0), ("SMA20 kesişimi", 0.0), ("Uyumsuzluk", 0.0), ("Trend çizgisi kırılımı", 0.0), ("Trend çizgisi SAT oku", 0.0)]
 
 
 def _sh(x, k):
@@ -75,11 +77,14 @@ def parite(s):
     pos, neg = K2.divergences(np.ascontiguousarray(M), c, pivot(c, 5, 5, True), pivot(c, 5, 5, False), 5, 10, 100)
     pa, na_ = pos > 0, neg > 0
     div = (pa & ~np.r_[False, pa[:-1]] & ~na_, na_ & ~np.r_[False, na_[:-1]] & ~pa)
-    for ad, (al, sat), H in (("SMA20 dönüşü", cmt, 15), ("SMA20 kesişimi", cmc, 15), ("Uyumsuzluk", div, 30)):
+    tl_al, tl_sat, _ = k3_seviye.tlb2(np.ascontiguousarray(h, dtype=np.float64), np.ascontiguousarray(l, dtype=np.float64), np.ascontiguousarray(c, dtype=np.float64))
+    for ad, (al, sat), H in (("SMA20 dönüşü", cmt, 15), ("SMA20 kesişimi", cmc, 15), ("Uyumsuzluk", div, 30), ("Trend çizgisi kırılımı", (tl_al, tl_sat), 30)):
         ix = np.flatnonzero((al | sat) & gec & ~(al & sat))
         y = np.where(al[ix], 1, -1).astype(np.int64)
         oi, oy, ob, on, orr = TS.sim_izgara(o, h, l, c, ix, y, sigall[ix], engel[ix], 1.0, 2.0, H, False, 0.0, 0.0, 0.0, False)
         ekle(ad, oi, oy, ob)
+        if ad == "Trend çizgisi kırılımı":
+            ekle("Trend çizgisi SAT oku", oi[oy < 0], oy[oy < 0], ob[oy < 0])
     print("tamam (sinyal)", s, file=sys.stderr, flush=True)
     return pd.concat(out)
 

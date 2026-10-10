@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.3.0)
+## Tanım Kartı (v6.4.0)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
@@ -61,6 +61,10 @@
 **Çizgiler (en kalın, açık renk):**
 - **SMA20 (yönüne göre yeşil / kırmızı):** Rengin döndüğü an ve fiyatın çizgiyi mum içinde kesmesi, 22 paritede iki yılda da küçük ama tutarlı brüt kazanç verdi (yön dönüşü +0,5 / +0,3 bp, kesişim +0,2 / +0,2 bp). VSP AL'ın (+3,7 / +1,4 bp) onda biri kadar; ana sinyal değil, yön bilgisi. Ayarlar → Görünüm'den kapatılabilir.
 - **Uyumsuzluk üçgenleri:** 10 göstergede (MACD, MACD histogram, RSI, Stokastik, CCI, Momentum, OBV, VW-MACD, CMF, MFI) normal uyumsuzluk bulunan ilk mumda; yeşil üçgen mumun altında pozitif, kırmızı üçgen mumun üstünde negatif uyumsuzluk. Testte iki yılda da küçük ama tutarlı brüt kazanç (+0,3 / +0,5 bp). Uyumsuzluk 5 mumluk pivot onayıyla birkaç mum gecikmeli bilinir; üçgen, bilindiği mumda çizilir. Ayarlar → Görünüm'den kapatılabilir.
+- **Trend çizgileri ve kırılım okları (Trend Lines v2):** Son 3 pivottan (20 mum) geçen ve o ana kadar hiçbir kapanışın kırmadığı çizgiler. Yükselen çizgi yeşil, düşen kırmızı; çizgi bir sonraki mumun kırılım seviyesine kadar uzanır. Kapanış yükselen çizginin altına inerse kırmızı **aşağı ok (SAT)**, düşen çizginin üstüne çıkarsa yeşil **yukarı ok (AL)**. Kırılımdan sonra çizgi kaybolur.
+  - Testte (piyasa girişi, stop 1σ, hedef 2R, en fazla 30 dk) iki yılda da brüt kazanç: +1,3 / +0,7 bp. 2026'da kazancın tamamı SAT okunda (+1,5 bp). Yani AL etiketinin zayıf kaldığı **tepeden satış** tarafını tamamlar.
+  - Parite başına günde yaklaşık 9 AL, 9 SAT oku. AL etiketinden (+3,8 / +1,4 bp) küçük; tek başına işlem değil, yön bilgisi.
+  - Ayarlar → Görünüm'den kapatılabilir.
 - VWAP (sarı, düz) ve ±2σ bantları (açık sarı, kesik).
 - Önceki gün yüksek/düşük (beyaz, noktalı).
 - Asya seansı yüksek/düşük (açık mor, kesik).
@@ -80,7 +84,7 @@
   - Brüt (komisyon öncesi): AL +1,8 / −0,9 bp, SAT −2,5 / −2,5 bp. Piyasa girişinde AL tarafı +1 ile +4 bp brüt kazandırıyor, ama bu maliyetin çok altında.
   - Ön kayıtlı başarı kuralı (iki yılda da net kâr ve istatistiksel güven) geçilmedi. 54 ayarın hiçbiri iki yılda da net pozitif değil.
   - Yani her 100 işlemde, işlem başına %0,5 risk alan bir hesap ortalama yaklaşık **%3,5–4** kaybeder (gerçek sonuç bu ortalamanın çevresinde dağılır).
-- **Gönderilen topluluk göstergeleri, katkı testi (sinyal, filtre, bilgi; komisyonsuz):** Birinci grupta 11 sinyal adayından yalnızca CM Ultimate MA'nın SMA20 sinyalleri geçti (SMA20 çizgisi olarak eklendi). 31 durumun hiçbiri VSP AL/SAT'ı tutarlı biçimde iyileştirmedi ya da oynaklık tahminine katkı vermedi. İkinci grupta (11 gösterge; sinyal, filtre, oynaklık, yön, seviye ve çıkış katmanları) yalnızca Divergence for Many Indicators geçti (uyumsuzluk üçgenleri olarak eklendi). İzleyen stopların (Supertrend, UT Bot, SuperTrend AI vb.) hiçbiri VSP'nin 5 dakikalık çıkışından iyi değil. Ayrıntı: `arastirma/BULGULAR.md` bölüm 15–16.
+- **Gönderilen topluluk göstergeleri, katkı testi (sinyal, filtre, bilgi; komisyonsuz):** Birinci grupta 11 sinyal adayından yalnızca CM Ultimate MA'nın SMA20 sinyalleri geçti (SMA20 çizgisi olarak eklendi). 31 durumun hiçbiri VSP AL/SAT'ı tutarlı biçimde iyileştirmedi ya da oynaklık tahminine katkı vermedi. İkinci grupta (11 gösterge; sinyal, filtre, oynaklık, yön, seviye ve çıkış katmanları) yalnızca Divergence for Many Indicators geçti (uyumsuzluk üçgenleri olarak eklendi). İzleyen stopların (Supertrend, UT Bot, SuperTrend AI vb.) hiçbiri VSP'nin 5 dakikalık çıkışından iyi değil. Üçüncü grupta (14 gösterge; 12 katman: sinyal, filtre, oynaklık, yön, seviye, çıkış, stop yerleşimi, giriş zamanlaması, uyum, coin seçimi, saat/gün, BTC bağlamı) yalnızca Trend Lines v2'nin çizgi kırılımı geçti (trend çizgileri ve oklar olarak eklendi). Stop yerleşimi, giriş zamanlaması, coin ya da saat seçimi ve BTC teyidi VSP AL/SAT'ı iyileştirmedi; en yakın aday "son 10 mumun dibinin altına stop" (iki yılda biraz iyi, ama güven eşiğinin altında; izleniyor). Literatürden alınan dört filtre adayı da (olay hacmi, BTC gecikmeli teyit, Abdi-Ranaldo makası) geçmedi. Ayrıntı: `arastirma/BULGULAR.md` bölüm 15–17.
 - **Gönderilen 13 topluluk göstergesi** (Supertrend, UT Bot, CM MACD, WaveTrend, Squeeze Momentum, Williams Vix Fix, ADX/DI, LuxAlgo S/R Breaks ve Trendlines, MSB-OB, SR Channels, ChartPrime HV Boxes, TFO Killzones) aynı motorla sınandı. Hepsi işlem başına 8–13 bp net zarar verdi; brüt yön bilgisi 1 bp'nin altında. VSP'ye eklenmedi. LuxAlgo SMC daha önce test edilmişti; Sessions [LuxAlgo] sinyal içermiyor.
 - **Beklenen hareket:**
   - 15 dakikalık gerçek hareketlerin %50'si öngörülen oynaklığın 0,61 katı içinde kalır, %80'i 1,23 katı içinde.
@@ -138,7 +142,7 @@
    - Arka planlar Ayarlar → **Görünüm** bölümünden kapatılabilir.
 10. **Stil:** Çizgiler varsayılan olarak en kalın ve açık renklidir. Ayarlar → **Stil** sekmesinden değiştirebilirsiniz.
 11. **Alarmlar:**
-   - Koşul VSP → "AL", "SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
+   - Koşul VSP → "AL", "SAT", "Trend çizgisi kırılımı AL", "Trend çizgisi kırılımı SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
    - Alarmlar yalnızca mum kapanışında tetiklenir.
    - **Not:** TradingView ücretsiz planında gösterge alarmları büyük olasılıkla kullanılamaz.
 12. **Güncelleme:** CPI/NFP tarih listesi 10 Aralık 2026'da biter. Yeni sürüm çıktığında 1. adımı tekrarlayın.
@@ -146,7 +150,8 @@
 ## Dürüst Not
 
 - Hiçbir gösterge kâr garantisi vermez.
-- AL/SAT komisyonsuz ölçüldüğünde dipten alış (AL) iki yılda da brüt kazandırdı (+3,8 / +1,4 bp); tepeden satışta (SAT) avantaj yok. Komisyon ödeniyorsa (VIP 0'da gidiş-dönüş 8–12 bp) sonuç net zarara döner.
+- AL/SAT komisyonsuz ölçüldüğünde dipten alış (AL) iki yılda da brüt kazandırdı (+3,8 / +1,4 bp); SAT etiketinde avantaj yok. Tepeden satış için en iyi bulunan, trend çizgisi kırılımının SAT okudur (+1,2 / +1,5 bp). Komisyon ödeniyorsa (VIP 0'da gidiş-dönüş 8–12 bp) bunların hepsi net zarara döner.
+- SMA20, uyumsuzluk ve trend çizgisi işaretlerinin kazancı işlem başına 1 bp civarında ya da altında. Tutarlı ama küçük; tek tek işlemde rastlantı baskındır.
 - 22 parite ve 21 aylık testlere göre, test edilen hiçbir gösterge (48 yerleşik gösterge, LuxAlgo SMC ve gönderilen 13 topluluk göstergesi dahil) 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
 - Veri Penceresi'ndeki "grafikteki işlemlerin ortalama net R'si" yalnızca grafikte yüklü yaklaşık 3,5 günü kapsar (birkaç düzine işlem). Bu kadar az işlemle sonuç çok oynaktır; birkaç günlük kâr ya da zarar kartlardaki uzun dönem sonucunu değiştirmez.
 - Gösterge sinyallerin işlem sonucunu mum verisiyle (yüksek/düşük) hesaplar. Aynı mumda stop ve hedef birlikte değmişse önce stop sayılır. Gerçek dolum, makas ve kayma farklı olabilir.

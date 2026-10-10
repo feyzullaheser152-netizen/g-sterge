@@ -729,3 +729,81 @@ Kullanıcı: "1 dakikalık grafikte görülmesi gereken tüm katmanlarda tüm ko
 | Yalnızca 30 mum sabit | −2,40 / +0,68 |
 
 - Sonuç: VSP sinyalinin etkisi ilk dakikalarda; 5 dakikalık çıkış en iyisi olarak kalıyor.
+
+## 17. Üçüncü grup ve 12 katman; literatür adayları (v6.4; `katki_testi3.py`, `katki_testi4.py`, `k3_*.py`)
+
+Kullanıcı: "6 katmanın yeterli olduğundan emin misin?" Katmanlar 12'ye çıkarıldı. Üçüncü gruptaki 14 gösterge beş modüle çevrildi ve her modül bağımsız bir ajanla Pine koduna karşı mum mum doğrulandı. Üç düzeltme yapıldı: AlphaTrend'de ilk mumun TR değeri, MFI'da sıfıra bölme, VFI'nin EMA'sında boşluk durumu. Komisyon sıfır (14b). Ön kayıt sonuçlardan önce commit'lendi.
+
+**Göstergeler:**
+- Chandelier Exit, Pivot Point SuperTrend, AlphaTrend.
+- Support Resistance Dynamic v2, Breakout Finder, Trend Lines v2.
+- Super OrderBlock / FVG / BoS Tools, CM Price Action Bars.
+- EMA 20/50/100/200, Madrid MA Ribbon, Volume Flow Indicator.
+- Volume-based S/R Zones V2 (1 dk, 4 saat, gün).
+
+**1) Sinyal** (23 aday, 54 ayarlık ızgara; kural: 2025 R > 0, t ≥ 2; 2026 R > 0, t ≥ 3):
+
+| Aday | Seçilen ayar | Brüt bp 2025 / 2026 | t 2025 / 2026 | Sonuç |
+|---|---|---|---|---|
+| **Trend Lines v2, çizgi kırılımı** | piyasa, k 1, R 2, H 30 | +1,27 / +0,69 | 4,8 / 3,1 | **Geçti** |
+| Madrid ribbon dönüşü (MADR) | piyasa, k 1, R 2, H 15 | +0,07 / +0,30 | 1,1 / 3,5 | 2025'te eşiğin altında |
+| VFI sinyal kesişimi (VFIX) | piyasa, k 1, R 2, H 15 | +0,08 / +0,25 | 1,4 / 3,7 | 2025'te eşiğin altında |
+| Hacim S/R 1 dk bölge tepkisi | piyasa, k 1, R 2, H 30 | +0,12 / +0,23 | 1,7 / 2,9 | Geçmedi |
+| Pin bar (CM Price Action) | piyasa, k 1, R 2, H 5 | +0,38 / −0,21 | 6,3 / −1,8 | 2026'da ters döndü |
+| Premium & Discount (iki tür), SR Dynamic v2 kırılımı | | +0,26 ile +0,33 / −0,06 ile +0,31 | 2,3–3,5 / 0,3–2,0 | 2026'da eşiğin altında |
+| Diğer 15 aday (Chandelier Exit, PPST, AlphaTrend, Breakout Finder, OB+FVG, BoS, EMA 20/50 ve 200 kesişimi, Madrid trend, VFI 0, hacim S/R kırılımları, 4 saat/gün tepkileri) | | −0,1 ile +3,7 / −0,2 ile +0,8 | | Geçmedi (+3,7: günlük hacim S/R kırılımı, az olay, 2026'da −0,1) |
+
+- **Trend çizgisi kırılımında** ızgaranın 27 piyasa girişli hücresinin hepsi iki yılda da pozitif (+0,33 ile +1,27 bp). Sonuç tek bir ayara bağlı değil.
+- Limit girişin 27 hücresinin hepsi negatif. Sebebi ters seçim: limit emir yalnızca fiyat kırılımdan geri dönünce doluyor.
+- Yöne göre (seçilen ayar): AL +1,33 / −0,09 bp, SAT +1,21 / +1,46 bp. 2026'da kazancın tamamı SAT tarafında. Yükselen çizginin aşağı kırılması, VSP'nin zayıf olduğu "tepeden sat" tarafını tamamlıyor.
+- Tanım (gösterge kendisi sinyal vermediği için ön kayıtla konuldu): Pivot 20, son 3 pivot, betikteki gibi geçerli çizgiler. Kapanış, bir önceki mumda geçerli olan yükselen çizginin altına inerse SAT, düşen çizginin üstüne çıkarsa AL.
+- Parite başına günde yaklaşık 9 AL ve 9 SAT kırılımı. Kazanç işlem başına 1 bp civarında. Gidiş-dönüş komisyonun (VIP 0'da 8–12 bp) çok altında.
+- **Uygulama (v6.4):**
+  - Trend çizgileri son mumda çizilir. Kırılım mumunda yeşil yukarı ok (AL) ya da kırmızı aşağı ok (SAT) çıkar.
+  - Pine kodunun düz Python karşılığı modülle karşılaştırıldı: SOL'un 60.000 mumunda 0 fark.
+  - Pine geçmiş sınırı nedeniyle çizgi kontrolü en fazla 990 mum geriye bakar.
+
+**2) Filtre** (VSP AL/SAT işlemleri; 21 yeni durum): Hiçbiri kabul edilmedi. 21 durumun 16'sında kapsam %20'nin altında: VSP AL sert düşüşten sonra geldiği için trend durumları nadiren işlem yönünde. Hacim S/R konumu (4 saat, gün) iki yılda +1,6 ile +2,6 bp, ama t 1,0–1,6.
+
+**3) Oynaklık bilgisi:** Hiçbiri 0,005'e ulaşmadı. En yüksek: yüksek hacim mumu 0,0021 / 0,0018.
+
+**4) Yön bilgisi:** Hiçbiri kabul edilmedi. Trend göstergelerinde bilinen hafif dönüş örüntüsü yine görüldü. Örnekler: Chandelier −0,99 / −0,79 bp, Madrid çoğunluğu −0,47 / −0,91, traşlı mum −0,65 / −1,14. Hepsi eşiğin altında.
+
+**5) Seviyeler:** 1. katmanda sınandı. Yalnızca trend çizgisi kırılımı geçti.
+
+**6) Çıkış:** Chandelier, Pivot Point SuperTrend ve AlphaTrend dönüşüyle çıkış: 2025'te −0,8 ile −1,6 bp, 2026'da −0,3 ile +0,04 bp. Kabul yok.
+
+**7) Stop yerleşimi** (VSP olayları, eşleştirilmiş; ölçü R; kural: iki yılda ≥ +0,01, 2026 t ≥ 3): Kabul yok.
+- **Son 10 mumun dibi/tepesi − 0,1σ (yapısal stop):** R farkı +0,023 / +0,030, t 1,4 / 2,2. İki yılda pozitif ama eşiğin altında. İzlemeye alınacak aday.
+- 1σ: −0,001 / +0,008. 3σ: −0,0007 / −0,0005.
+- Pivot Point SuperTrend stopu: −0,09 / −0,06 (t −3,3 / −2,0).
+- Chandelier stopu yalnızca 31 / 21 olayda uygulanabildi; anlamsız.
+
+**8) Giriş zamanlaması:** Kabul yok. Hemen giriş en iyisi.
+- Bir mum beklemek: −1,3 / +0,2 bp.
+- İlk doğru renkli mumu beklemek: −4,5 / −2,6 bp.
+- Sinyal mumunun tepesi aşılınca girmek: −43 / −34 bp. İşlemlerin %30'u alınıyor ve en kötü giriş bu.
+
+**9) Uyum** (uyumsuzluk, SMA20 dönüşü, pin bar ve mum formasyonunun son 5 mumdaki sayısı): Kabul yok.
+- "Puan ≥ 2" farkı +3,0 / −0,5 bp. Mum formasyonu +3,3 / −1,6 bp. İkisi de 2026'da tutmadı.
+
+**10) Coin seçimi:** Kabul yok. 2025 ve 2026 parite sıralamaları arasında Spearman ρ = 0,21. 2025'in iyi paritelerinin 2026'daki farkı +0,4 bp (t 0,5). 2026'da en iyiler HYPE, OP, BTC ve ZEC.
+
+**11) Saat ve gün:** Kabul yok. Saat dilimi ρ = −0,37, haftanın günü ρ = −0,14. Bir yılın iyi saatleri ertesi yıl tutmuyor.
+
+**12) BTC bağlamı (altcoin işlemleri):** Kabul yok.
+- BTC'de de sert hareket: −2,4 / +1,6 bp.
+- BTC'de de VSP sinyali: −0,8 / −0,6 bp.
+
+**Literatür adayları** (`katki_testi4.py`; Ekim 2026 internet taraması; ayrı ön kayıt):
+
+| Aday ve kaynak | Fark bp 2025 / 2026 | t | Sonuç |
+|---|---|---|---|
+| F1 AL'da yüksek olay hacmi (Christensen, Oomen, Renò 2022, drift burst) | +1,2 / −2,8 | 0,4 / −1,0 | Geçmedi |
+| F2 SAT'ta düşük olay hacmi (Llorente ve ark. 2002; Bianchi ve ark. 2022) | −2,9 / −1,8 | −1,5 / −0,9 | Geçmedi (işaret ters) |
+| F3 altcoinde BTC'nin son 3 dk getirisi işlem yönünde (Kurihara ve Matsumoto 2026) | +0,4 / 0,0 | 0,2 / 0,0 | Geçmedi |
+| F4 Abdi-Ranaldo makası yüksek (Abdi ve Ranaldo 2017; Brauneis ve ark. 2021) | +2,0 / +0,7 | 1,1 / 0,4 | Geçmedi |
+
+- F4'te 1 dk mumlardan tahmin edilen makas olayların yaklaşık %70'inde sıfır çıktı. Kapsam bu yüzden %50 değil %30.
+- Taramada 1 dk'da maliyeti aşan bir kenar gösteren yayın bulunamadı. Ulaşılan kaynaklar yalnızca özetlerdi.
+- Asimetri literatürle uyumlu: Negatif getiriler daha hızlı geri dönüyor, pozitif getiriler daha kalıcı (Corbet ve Katsiampa 2020; Saef ve ark. 2024). VSP'nin SAT tarafının zayıf olması bununla açıklanabilir.

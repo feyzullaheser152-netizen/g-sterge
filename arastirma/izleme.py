@@ -338,7 +338,7 @@ def rapor():
         seri[kisa] = oran[k]
     seri["Hareket ≥ maliyet %"] = kap["hm"]
     tb = T.groupby(["ay", "sinyal"]).brut.mean().unstack("sinyal")
-    for ad, kisa in (("VSP AL", "AL bp"), ("VSP SAT", "SAT bp"), ("SMA20 dönüşü", "SMA20 dön. bp"), ("SMA20 kesişimi", "SMA20 kes. bp"), ("Uyumsuzluk", "Uyumsuzluk bp")):
+    for ad, kisa in (("VSP AL", "AL bp"), ("VSP SAT", "SAT bp"), ("SMA20 dönüşü", "SMA20 dön. bp"), ("SMA20 kesişimi", "SMA20 kes. bp"), ("Uyumsuzluk", "Uyumsuzluk bp"), ("Trend çizgisi kırılımı", "Trend ç. bp"), ("Trend çizgisi SAT oku", "Trend ç. SAT bp")):
         seri[kisa] = tb[ad] if ad in tb else np.nan
     bic = {"%50 kapsama": 1, "%80 kapsama": 1, "Sarı %80 kapsama": 1, "SHORT kov. 5 dk": 1, "SHORT n": 0, "LONG kov. 5 dk": 1, "Hareket ≥ maliyet %": 0}
     md = []
@@ -364,7 +364,7 @@ def rapor():
     md.append("- Kural: Ondalık RMS küçülmeli; genel %80 ve %50 kapsama sapması mevcut modelden en fazla 0,5 puan büyük olabilir.")
     md.append(f"- {karisim}\n")
     md.append("## Aylık seri\n")
-    md.append("Oynaklık sütunları ×normal (ayın tüm mumlarına göre). Kovalama sütunları bp (pozitif = o yönde kovalayan ortalamada geride). Sinyal sütunları (AL, SAT, SMA20, Uyumsuzluk) brüt bp / işlem; ayarlar `izleme_sinyal.py` başında. \"Hareket ≥ maliyet %\": 15 dk tipik hareketin %0,08 maliyeti (maker + taker + kayma) geçtiği anların oranı.\n")
+    md.append("Oynaklık sütunları ×normal (ayın tüm mumlarına göre). Kovalama sütunları bp (pozitif = o yönde kovalayan ortalamada geride). Sinyal sütunları (AL, SAT, SMA20, Uyumsuzluk, Trend çizgisi) brüt bp / işlem; ayarlar `izleme_sinyal.py` başında. \"Hareket ≥ maliyet %\": 15 dk tipik hareketin %0,08 maliyeti (maker + taker + kayma) geçtiği anların oranı.\n")
     md.append("| Ay | " + " | ".join(seri.columns) + " |")
     md.append("|---" * (len(seri.columns) + 1) + "|")
     for a, row in seri.iterrows():
