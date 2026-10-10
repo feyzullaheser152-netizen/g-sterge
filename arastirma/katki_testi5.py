@@ -10,6 +10,7 @@ Gostergeler (kullanici Ekim 2026'da gonderdi; daha once sinanmadilar):
                 supurmesi de (isaret yillar arasinda degisiyor); tekrarlanmaz.
   k5_vdelta   : Volume Delta Pivot Matrix [BigBeluga] (CC BY-NC-SA 4.0). Pivot (5,5) seviyeleri, pivot cevresindeki 11 mumun kapanis konumuyla
                 agirliklandirilmis hacim deltasi; kapanis seviyeyi gecince seviye silinir.
+  k5_trinity  : Trinity Reversal Pattern [AlgoAlpha] (MPL 2.0). Uc mumluk donus formasyonu ve formasyon ucundaki seviye (100 mum gecerli).
 Mantik uyarlamasi; kod kopyalanmadi, yalnizca arastirma icindir. Her modul bagimsiz bir ajanla Pine koduna karsi dogrulanir (scratchpad/k5_kaynak).
 
 ON KAYIT (sonuclardan once yazildi; esikler katki_testi3 ile ayni).
@@ -33,6 +34,8 @@ Sinyaller (1. katman):
   VDPT  : dokunus (on kayitla): onceki mumdan kalan aktif destek icin low <= seviye ve close > seviye -> AL; direnc icin high >= seviye ve close < seviye -> SAT.
   VDPTD : VDPT, yalnizca o anda cizilecek seviyelerle: aktif seviyelerin |delta|'si en buyuk |delta|'nin en az %20'si olanlar, en yeniden
           eskiye en fazla 10 tane (gostergenin son mumda uyguladigi filtre her mumda o anki aktif seviyelerle).
+  TRIN  : Trinity formasyonu (boga AL / ayi SAT).
+  TRINT : Trinity seviyesine dokunus (gostergenin alarmi: boga seviyesi AL / ayi seviyesi SAT; ikisi birden ise yok).
   Hepsi 54 ayarlik izgarada (TS.sim_izgara). Kural: 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
   Ek (yerel cikis, ayni kural): BFLIP gostergenin kendi pozisyonuyla: sonraki mumun acilisinda giris, NATIVE stop (gostergenin yapisal stopu),
   cikis stop ya da ters donus (donus mumundan sonraki acilis), en fazla 240 mum. R = brut / (stop mesafesi / giris).
@@ -57,10 +60,10 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import katki_testi3 as K3
-import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta
+import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta]
+MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity]
 IZGARA = os.environ.get("K5_IZGARA", "1") != "0"
 
 
