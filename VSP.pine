@@ -1,9 +1,9 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v6.0.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v6.1.0 | 1 dakika piyasa gostergesi
 // Kullanicinin istegiyle AL/SAT, stop, hedef ve pozisyon buyuklugu onerisi geri geldi (v6.0). Grafikte tablo ya da kutu yoktur. Bilgi dort yoldan verilir:
-//   1) AL/SAT etiketi (mum kapanisinda): sert 15 dk hareketten sonra kisa vadeli geri donus. Stop ve hedef cizgileri, etikette miktar.
-//      Dayanak: arastirmada tutarli cikan tek yon etkisi (BULGULAR 3, 10c, 14). Varsayilanlar ön kayitli secimle (2025): limit giris, stop 2 sigma15, hedef 2R, en fazla 5 dk.
-//      Test (22 parite, VIP 0 komisyon): islem basina net -8,5 bp (2025) ve -9,7 bp (2026), yani -0,07 / -0,08 R. Kurali gecmedi; kullanici istegiyle gosterilir.
+//   1) AL/SAT etiketi (mum kapanisinda): dipten al, tepeden sat. Sert 15 dk dususten sonra AL, sert 15 dk yukselisten sonra SAT (geri donus). Stop ve hedef cizgileri, etikette miktar.
+//      Dayanak: arastirmada tutarli cikan tek yon etkisi (BULGULAR 3, 10c, 14). v6.1: kullanici komisyonu onemsemiyor; ayarlar komisyonsuz (brut) 2025 sonucuyla secildi:
+//      piyasa girisi, stop 2 sigma15, hedef 2R, en fazla 5 dk. Brut islem basina 2025 / 2026: AL +3,8 / +1,4 bp, SAT -0,3 / -0,4 bp (BULGULAR 14b).
 //      Ayni motorla sinanan 13 topluluk gostergesinin (Supertrend, UT Bot, MACD, WaveTrend, Squeeze vb.) hicbiri daha iyi degil (BULGULAR 14).
 //   2) Durum satiri (gosterge adinin yaninda): hareket / maliyet, beklenen hareket (%50 ve %80), siradaki oynaklik anina kalan dakika.
 //   3) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
@@ -24,7 +24,7 @@ tpR      = input.float(2.0, "Hedef (stop mesafesinin katı, R)", minval = 0.5, m
 holdMax  = input.int(5, "En uzun tutma (dk); sonra kapanışta çık", minval = 1, maxval = 240, group = grpS, display = display.none)
 
 grpE = "Maliyet"
-entryMode = input.string("Limit (maker)", "Giriş emri tipiniz", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
+entryMode = input.string("Piyasa (taker)", "Giriş emri tipiniz", options = ["Limit (maker)", "Piyasa (taker)"], group = grpE, display = display.none)
 makerFee  = input.float(0.02, "Maker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 takerFee  = input.float(0.05, "Taker komisyonu % (tek yön)", step = 0.005, group = grpE, display = display.none)
 slipSide  = input.float(0.01, "Kayma % (tek yön; en az yarım tick)", step = 0.005, group = grpE, display = display.none)
@@ -198,13 +198,12 @@ evInH   = inH(tD) or inH(tO) or inH(tS) or inH(tF) or evOpen
 
 // === AL/SAT, stop, hedef ve pozisyon (v6.0; arastirma/sinyal_v6.py ile ayni kurallar) ===
 // AL: yeni sert satis mumu kapandi (z15 <= -3, onceki 15 mumda sert satis yok). SAT: yeni sert alis mumu. Beklenen: kisa vadeli geri donus.
-// Engeller (sabit 15 dk ufukla): zamanlanmis olay 15 dk icinde ya da suruyor (stop olcegi orada guvenilmez), tipik 15 dk hareket maliyetin altinda, acik islem var.
+// Engeller (sabit 15 dk ufukla): zamanlanmis olay 15 dk icinde ya da suruyor (stop olcegi orada guvenilmez), acik islem var. Komisyon sinyali etkilemez (v6.1).
 // Stop: stopK x sig15, hedef: tpR x stop mesafesi, holdMax dk sonra kapanista cikis. Ayni mumda stop ve hedef: once stop (ihtiyatli).
 // Miktar: stopta kaybedilen tutar (mesafe + giris + stop cikisi maliyeti) = bakiye x risk %.
 inH15(int t) => not na(t) and t > time and t - time <= 15 * 60000
 evIn15   = inH15(tD) or inH15(tO) or inH15(tS) or inH15(tF) or evOpen
 sig15    = math.sqrt(ewVar * 15)
-cost15ok = costPct > 0 and 0.61 * sig15 * 100 >= costPct
 newUp    = flowUp and upAgo >= 15
 inFee    = entryX / 100
 outStop  = takerX / 100
@@ -265,7 +264,7 @@ if pos != 0
         pos := 0
         exitI := bar_index
 // 3) Yeni sinyal (yalnizca kapanmis mumda; acik ya da bekleyen islem yokken)
-canSig = showSig and barstate.isconfirmed and pos == 0 and pend == 0 and bar_index > exitI and not (evIn15 or evNow) and cost15ok and sig15 > 0
+canSig = showSig and barstate.isconfirmed and pos == 0 and pend == 0 and bar_index > exitI and not (evIn15 or evNow) and sig15 > 0
 buySig  = canSig and newDn
 sellSig = canSig and newUp and not newDn
 if buySig or sellSig

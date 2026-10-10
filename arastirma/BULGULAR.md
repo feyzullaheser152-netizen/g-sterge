@@ -655,3 +655,11 @@ Kullanıcı, v5.0'da kaldırılan AL/SAT, stop ve pozisyon önerisini geri isted
 - Topluluk göstergelerinden VSP'ye hiçbir öğe eklenmedi.
 - VSP'nin AL/SAT'ı kullanıcı isteğiyle v6 sinyalidir: limit giriş, stop 2 × σ15, hedef 2R, en fazla 5 dk. Kural geçmediği için kartlarda beklenen net sonuç (işlem başına yaklaşık −0,07 / −0,08 R) açıkça yazılır.
 - Pozisyon büyüklüğü: stopta kaybedilen tutar (mesafe + giriş ve stop çıkışı maliyeti) = bakiye × risk %.
+
+### 14b. v6.1: komisyonsuz seçim (kullanıcı kararı)
+
+- Kullanıcı: "Komisyon giderlerinin önemi yok; 1 dakikalıkta kararlıyım; dipten al, tepeden sat veren göstergeyi ver."
+- Ayarlar, bölüm 14'teki aynı v6 ızgarasından (VIP 0 maliyet engeli açıkken üretilen işlemler) **brüt** 2025 sonucuna göre seçildi; 2026 doğrulama olarak raporlandı. Bu seçim ayrı bir ön kayıtla yapılmadı.
+- Seçilen: piyasa girişi, k 2, R 2, H 5. Brüt bp / işlem (2025 / 2026): toplam +1,66 / +0,45; AL +3,78 / +1,42; SAT −0,33 / −0,43.
+- Göstergede hareket / maliyet engeli kaldırıldı; komisyon ayarları sinyali etkilemez. Giriş varsayılanı piyasa emri oldu (limit giriş ters seçim yüzünden brütü 2–3 bp kötüleştiriyor).
+- Makas (yarım tick) bu brüt rakamlara dahil değil; büyük paritelerde 0,01–0,5 bp, tick'i kaba paritelerde 2–4 bp olabilir.

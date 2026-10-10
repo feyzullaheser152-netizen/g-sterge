@@ -1,25 +1,25 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.0.0)
+## Tanım Kartı (v6.1.0)
 
 **Ne yapar:**
-- 1 dakikalık kripto vadeli grafikte **AL/SAT sinyali, stop, hedef ve pozisyon büyüklüğü önerir** ve piyasayı anlatır.
+- 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
 - Grafikte tablo ya da kutu yoktur. Bilgi dört yoldan verilir: AL/SAT etiketi ve stop/hedef çizgileri, durum satırı, arka plan rengi, seviye çizgileri.
-- **Önemli:** Testte AL/SAT sinyali komisyon ve kaymadan sonra **net zarar** verdi (aşağıda "Dayanak" ve "Dürüst Not"). Sinyal, en tutarlı ölçülen etkiye dayanan en iyi aday olduğu için gösterilir; kâr beklentisi yoktur.
+- Sinyal, dip ya da tepe oluştuktan sonra mum kapanışında gelir; geriye dönük değişmez. Dibi önceden bilen (repaint yapmayan) bir gösterge yoktur.
 
 **AL/SAT (mum kapanışında, geriye dönük değişmez):**
 
 | Etiket | Ne zaman | Beklenti |
 |---|---|---|
-| **AL** (yeşil, mumun altında) | Son 15 dakikada sert düşüş (z ≤ −3) ve satış akışı; önceki 15 dakikada benzeri yok | Kısa vadeli geri dönüş (yukarı) |
-| **SAT** (kırmızı, mumun üstünde) | Son 15 dakikada sert yükseliş (z ≥ +3) ve alış akışı | Kısa vadeli geri dönüş (aşağı) |
+| **AL** (yeşil, mumun altında) | Dip: son 15 dakikada sert düşüş (z ≤ −3) ve satış akışı; önceki 15 dakikada benzeri yok | Kısa vadeli geri dönüş (yukarı) |
+| **SAT** (kırmızı, mumun üstünde) | Tepe: son 15 dakikada sert yükseliş (z ≥ +3) ve alış akışı | Kısa vadeli geri dönüş (aşağı) |
 
-- **Giriş:** Varsayılan limit emir, sinyal mumunun kapanış fiyatından. Yalnızca sonraki mumda fiyat bu seviyenin ötesine geçerse dolmuş sayılır. Ayarlardan piyasa emrine geçilebilir.
+- **Giriş:** Varsayılan piyasa emri, sinyalden sonraki mumun açılışında. Ayarlardan limit emre geçilebilir (limit, fiyat aleyhe giderken dolduğu için brüt sonucu kötüleştirir).
 - **Stop:** Girişten 2 × (15 dk oynaklık) uzakta (kırmızı çizgi).
 - **Hedef:** Stop mesafesinin 2 katı (yeşil çizgi).
 - **Süre:** En fazla 5 dakika; hedef ya da stop gelmezse 5. mumun kapanışında çıkılır.
 - **Miktar:** Etiketin altındaki sayı. Stopta kaybedilecek tutar (mesafe + komisyon + kayma), bakiyenizin risk yüzdesi kadar olur. Etiketin üstüne gelince giriş, stop, hedef, pozisyon değeri ve kaldıraç görünür.
-- **Sinyal verilmeyen anlar:** Zamanlanmış olay 15 dakika içindeyse ya da sürüyorsa (stop ölçeği o anlarda güvenilmez), tipik 15 dk hareket maliyeti karşılamıyorsa ve açık işlem varken.
+- **Sinyal verilmeyen anlar:** Zamanlanmış olay 15 dakika içindeyse ya da sürüyorsa (stop ölçeği o anlarda güvenilmez) ve açık işlem varken. Komisyon ayarları sinyali etkilemez.
 - **Veri Penceresi'nde:** Stop, hedef, stop mesafesi %, şimdi girilse önerilen miktar ve pozisyon değeri, grafikteki AL/SAT işlemlerinin sayısı ve ortalama net R'si (maliyet dahil).
 
 **Durum satırı (gösterge adının yanında, soldan sağa):**
@@ -69,8 +69,11 @@
 - Büyük paritelerde (BTC, ETH, SOL) gerçek yarım makas 0,005–0,5 baz puan. Varsayılan %0,01 kayma orada makastan çok gecikme ve emir büyüklüğü payıdır.
 
 **Dayanak (22 Binance vadeli paritesi, 21 ay; 2025 keşif, 2026 doğrulama):**
-- **AL/SAT (v6.0, ön kayıtlı test):**
-  - Varsayılan ayarlar 54 ayar arasından yalnızca 2025 verisiyle seçildi (limit giriş, stop 2σ, hedef 2R, 5 dk).
+- **AL/SAT (v6.1, komisyonsuz):**
+  - Kullanıcı komisyonu önemsemediği için ayarlar aynı 54 ayar arasından komisyonsuz (brüt) 2025 sonucuyla seçildi: piyasa girişi, stop 2σ, hedef 2R, en fazla 5 dk.
+  - Brüt kazanç, işlem başına (2025 / 2026): **AL (dipten alış) +3,8 / +1,4 bp**, SAT (tepeden satış) −0,3 / −0,4 bp. Dipten alış iki yılda da kazandırdı; tepeden satışta belirgin bir avantaj yok.
+- **AL/SAT (v6.0, ön kayıtlı test, VIP 0 komisyonla):**
+  - 54 ayar arasından yalnızca 2025 verisiyle seçilen ayar (limit giriş, stop 2σ, hedef 2R, 5 dk).
   - İşlem başına net sonuç (VIP 0 komisyon: maker %0,02, taker %0,05, kayma %0,01): 2025'te **−8,5 bp (−0,07 R)**, 2026'da **−9,7 bp (−0,08 R)**. Düşük ücretle (maker %0, taker %0,02) −3,5 / −4,7 bp.
   - Brüt (komisyon öncesi): AL +1,8 / −0,9 bp, SAT −2,5 / −2,5 bp. Piyasa girişinde AL tarafı +1 ile +4 bp brüt kazandırıyor, ama bu maliyetin çok altında.
   - Ön kayıtlı başarı kuralı (iki yılda da net kâr ve istatistiksel güven) geçilmedi. 54 ayarın hiçbiri iki yılda da net pozitif değil.
@@ -140,7 +143,7 @@
 ## Dürüst Not
 
 - Hiçbir gösterge kâr garantisi vermez.
-- **VSP'nin AL/SAT sinyali testte net zarar verdi:** işlem başına yaklaşık −0,07 / −0,08 R (−8,5 / −9,7 bp). Sinyali takip etmek, ortalamada hesabı küçültür. Kayıp büyük ölçüde komisyon ve kaymadan gelir; brüt etki 1–2 bp, maliyet 8–12 bp.
+- AL/SAT komisyonsuz ölçüldüğünde dipten alış (AL) iki yılda da brüt kazandırdı (+3,8 / +1,4 bp); tepeden satışta (SAT) avantaj yok. Komisyon ödeniyorsa (VIP 0'da gidiş-dönüş 8–12 bp) sonuç net zarara döner.
 - 22 parite ve 21 aylık testlere göre, test edilen hiçbir gösterge (48 yerleşik gösterge, LuxAlgo SMC ve gönderilen 13 topluluk göstergesi dahil) 1 dakikalık grafikte maliyeti aşan yön bilgisi vermiyor.
 - Veri Penceresi'ndeki "grafikteki işlemlerin ortalama net R'si" yalnızca grafikte yüklü yaklaşık 3,5 günü kapsar (birkaç düzine işlem). Bu kadar az işlemle sonuç çok oynaktır; birkaç günlük kâr ya da zarar kartlardaki uzun dönem sonucunu değiştirmez.
 - Gösterge sinyallerin işlem sonucunu mum verisiyle (yüksek/düşük) hesaplar. Aynı mumda stop ve hedef birlikte değmişse önce stop sayılır. Gerçek dolum, makas ve kayma farklı olabilir.
