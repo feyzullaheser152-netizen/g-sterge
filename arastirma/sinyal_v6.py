@@ -95,7 +95,7 @@ def olaylar(s):
     return {"sym": s, "ts": ts[ix], "yon": yon, "sig": sig[ix], "c0": c[ix], "o": o[j], "h": h[j], "l": l[j], "c": c[j]}
 
 
-def islem(E, k, R, H, giris, sen):
+def islem(E, k, R, H, giris, sen, kapi=True):
     """Her olay icin net getiri (kesir) ve R. Acik islem varken yeni sinyal alinmaz (parite bazinda, ardisik)."""
     mk, tk, sl = SEN[sen]
     y = E["yon"].astype(float)
@@ -107,6 +107,8 @@ def islem(E, k, R, H, giris, sen):
         ent = E["c0"].copy()
         dolu = np.where(y > 0, E["l"][:, 0] < ent, E["h"][:, 0] > ent)
         fin = mk
+    if kapi:  # (b) hareket / maliyet >= 1: tipik 15 dk hareket (0,61 sigma15) gidis-donus maliyetini karsilamali
+        dolu = dolu & (0.61 * E["sig"] >= fin + tk + sl)
     d = k * E["sig"]  # stop mesafesi (log ~ kesir)
     stop = ent * np.exp(-y * d)
     hedef = ent * np.exp(y * R * d)
