@@ -1,6 +1,6 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.4.0)
+## Tanım Kartı (v6.4.1)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
@@ -60,10 +60,12 @@
 
 **Çizgiler (en kalın, açık renk):**
 - **SMA20 (yönüne göre yeşil / kırmızı):** Rengin döndüğü an ve fiyatın çizgiyi mum içinde kesmesi, 22 paritede iki yılda da küçük ama tutarlı brüt kazanç verdi (yön dönüşü +0,5 / +0,3 bp, kesişim +0,2 / +0,2 bp). VSP AL'ın (+3,7 / +1,4 bp) onda biri kadar; ana sinyal değil, yön bilgisi. Ayarlar → Görünüm'den kapatılabilir.
-- **Uyumsuzluk üçgenleri:** 10 göstergede (MACD, MACD histogram, RSI, Stokastik, CCI, Momentum, OBV, VW-MACD, CMF, MFI) normal uyumsuzluk bulunan ilk mumda; yeşil üçgen mumun altında pozitif, kırmızı üçgen mumun üstünde negatif uyumsuzluk. Testte iki yılda da küçük ama tutarlı brüt kazanç (+0,3 / +0,5 bp). Uyumsuzluk 5 mumluk pivot onayıyla birkaç mum gecikmeli bilinir; üçgen, bilindiği mumda çizilir. Ayarlar → Görünüm'den kapatılabilir.
+- **Uyumsuzluk üçgenleri:** 10 göstergede (MACD, MACD histogram, RSI, Stokastik, CCI, Momentum, OBV, VW-MACD, CMF, MFI) normal uyumsuzluk bulunan ilk mumda; yeşil üçgen mumun altında pozitif, kırmızı üçgen mumun üstünde negatif uyumsuzluk. Testte iki yılda da küçük ama tutarlı brüt kazanç (+0,3 / +0,5 bp). Kazancın tamamı kırmızı üçgende (tepede negatif uyumsuzluk, +1,0 / +0,9 bp); yeşil üçgen ortalamada sıfıra yakın. Uyumsuzluk 5 mumluk pivot onayıyla birkaç mum gecikmeli bilinir; üçgen, bilindiği mumda çizilir. Ayarlar → Görünüm'den kapatılabilir.
 - **Trend çizgileri ve kırılım okları (Trend Lines v2):** Son 3 pivottan (20 mum) geçen ve o ana kadar hiçbir kapanışın kırmadığı çizgiler. Yükselen çizgi yeşil, düşen kırmızı; çizgi bir sonraki mumun kırılım seviyesine kadar uzanır. Kapanış yükselen çizginin altına inerse kırmızı **aşağı ok (SAT)**, düşen çizginin üstüne çıkarsa yeşil **yukarı ok (AL)**. Kırılımdan sonra çizgi kaybolur.
   - Testte (piyasa girişi, stop 1σ, hedef 2R, en fazla 30 dk) iki yılda da brüt kazanç: +1,3 / +0,7 bp. 2026'da kazancın tamamı SAT okunda (+1,5 bp). Yani AL etiketinin zayıf kaldığı **tepeden satış** tarafını tamamlar.
   - Parite başına günde yaklaşık 9 AL, 9 SAT oku. AL etiketinden (+3,8 / +1,4 bp) küçük; tek başına işlem değil, yön bilgisi.
+  - Canlı mumda çizgi, o mumun kapanışında sınanan seviyeyi gösterir; mum içinde yer değiştirmez.
+  - Pivotlar testteki eşitlik kuralıyla hesaplanır (iki eşit tepeden öndeki sayılır, sonraki sayılmaz). TradingView'in yerleşik pivot fonksiyonu eşit tepelerde farklı davranabildiği için, orijinal Trend Lines v2 göstergesiyle birkaç çizgi farklı olabilir. VSP testte ölçülen çizgileri çizer. Uyumsuzluk üçgenleri de aynı kuralı kullanır.
   - Ayarlar → Görünüm'den kapatılabilir.
 - VWAP (sarı, düz) ve ±2σ bantları (açık sarı, kesik).
 - Önceki gün yüksek/düşük (beyaz, noktalı).
@@ -150,7 +152,8 @@
    - Koşul VSP → "AL", "SAT", "Trend çizgisi kırılımı AL", "Trend çizgisi kırılımı SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
    - Alarmlar yalnızca mum kapanışında tetiklenir.
    - **Not:** TradingView ücretsiz planında gösterge alarmları büyük olasılıkla kullanılamaz.
-12. **Güncelleme:** CPI/NFP tarih listesi 10 Aralık 2026'da biter. Yeni sürüm çıktığında 1. adımı tekrarlayın.
+12. **Zaman aşımı:** TradingView "hesaplama çok uzun sürdü" benzeri bir hata verirse Ayarlar → **Görünüm** bölümünden önce trend çizgilerini, gerekirse uyumsuzluk işaretlerini kapatın. Kapatılan katmanın hesabı da durur (o katmanın alarmı da çalışmaz).
+13. **Güncelleme:** CPI/NFP tarih listesi 10 Aralık 2026'da biter. Yeni sürüm çıktığında 1. adımı tekrarlayın.
 
 ## Dürüst Not
 
