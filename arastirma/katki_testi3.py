@@ -6,13 +6,15 @@ Yeni gostergeler arastirma/k3_*.py modullerinde (her biri bagimsiz bir ajanla Pi
   k3_seviye : Support Resistance Dynamic v2, Breakout Finder, Trend Lines v2 [LonesomeTheBlue]
   k3_smcmum : Super OrderBlock / FVG / BoS Tools [makuchaku & eFe], CM Price Action Bars [ChrisMoody]
   k3_serit  : EMA 20/50/100/200, Madrid Moving Average Ribbon [Madrid], Volume Flow Indicator [LazyBear]
+  k3_vsz    : Volume-based Support & Resistance Zones V2 [synapticex, Lij_MC]: hacim onayli fraktal seviyeleri 1 dk, 4 saat ve gun
+              (kirilim VSZB_*, bolge tepkisi VSZR_*); literal donguyle birebir ve kesme testiyle repaint yok (ust zaman dilimi yalnizca tamamlanmis mumlardan).
 
 ON KAYIT (sonuclardan once yazildi). "VSP islemleri": v6.1 sinyali (sert 15 dk hareket sonrasi geri donus), piyasa girisi, stop 2 sigma15, hedef 2R, 5 dk.
  1) Sinyal: yeni adaylar (modullerin S ciktilari) 54 ayarlik izgarada; kural 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
  2) Filtre: yeni D/U durumlari VSP islemlerinde; kural katki_testi2 ile ayni (iki yil ayni isaret, |fark| >= 1 bp, t 2/3, kapsam %20-80).
  3) Oynaklik bilgisi: R2 artisi iki yilda >= 0,005.
  4) Yon bilgisi: sonraki 15 dk farki iki yilda ayni isaret, >= 1 bp, t 2/3.
- 5) Seviyeler: SRD, BOF, TLB2, PPDD, OBFVG, BOS1 dokunus/kirilim sinyalleri 1. katmanda.
+ 5) Seviyeler: SRD, BOF, TLB2, PPDD, OBFVG, BOS1, VSZB_*, VSZR_* dokunus/kirilim sinyalleri 1. katmanda.
  6) Cikis: Chandelier Exit, Pivot Point SuperTrend, AlphaTrend donusu (katki_testi2.exits ile ayni; kabul: iki yilda >= +0,5 bp, 2026 t >= 3).
  7) Stop yerlesimi (VSP olaylari, bagimsiz, eslestirilmis): stop = 1 / 2 (temel) / 3 sigma15; son 10 mumun dibi/tepesi - 0,1 sigma15 (yapisal);
     Chandelier stopu; Pivot Point SuperTrend stopu. Hedef 2R, en fazla 5 dk. Olcu R (brut / stop mesafesi). Stop girisin yanlis tarafindaysa olay atlanir.
@@ -40,11 +42,11 @@ import sinyal_v6
 import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
-import k3_izleyen, k3_seviye, k3_smcmum, k3_serit
+import k3_izleyen, k3_seviye, k3_smcmum, k3_serit, k3_vsz
 from topluluk_sinyal import sma, pivot
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k3_izleyen, k3_seviye, k3_smcmum, k3_serit]
+MODS = [k3_izleyen, k3_seviye, k3_smcmum, k3_serit, k3_vsz]
 
 
 def btc_baglam():
