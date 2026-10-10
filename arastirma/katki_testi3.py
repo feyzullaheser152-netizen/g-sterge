@@ -47,6 +47,7 @@ from topluluk_sinyal import sma, pivot
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
 MODS = [k3_izleyen, k3_seviye, k3_smcmum, k3_serit, k3_vsz]
+IZGARA = os.environ.get("K3_IZGARA", "1") != "0"  # 0: 1. katman izgarasi onceki calismanin katki3_A.csv dosyasindan okunur (kurallar ayni)
 
 
 def btc_baglam():
@@ -172,7 +173,7 @@ def parite_isle(arg):
     gec = (t >= 5000) & (t < n - TS.NATIVE_MAX - 3) & np.isfinite(sigall) & (sigall > 0)
     out = {"A": {}}
     # 1) sinyal
-    for ad, (al, sat) in S.items():
+    for ad, (al, sat) in (S.items() if IZGARA else ()):
         al = np.asarray(al, bool)
         sat = np.asarray(sat, bool)
         ix = np.flatnonzero((al | sat) & gec & ~(al & sat))
@@ -278,6 +279,8 @@ def parite_isle(arg):
 
 
 def esli_fark(d, a, b):
+    if a == b:  # temel kendisiyle karsilastirilmaz
+        return 0.0, np.nan, int(d[a].notna().sum())
     x = d[[a, b, "gun"]].dropna()
     df_ = x[a] - x[b]
     g = (df_ - df_.mean()).groupby(x["gun"]).sum()
@@ -303,12 +306,16 @@ def main():
     pd.set_option("display.max_rows", 500)
     pd.set_option("display.max_columns", 40)
     # 1
-    rows = []
-    for key, yl in A.items():
-        for y in (2025, 2026):
-            rows.append(dict(aday=key[0], giris=key[2], k=key[3], R=key[4], H=key[5], yil=y, **TS.ozet(yl[y])))
-    DA = pd.DataFrame(rows)
-    DA.to_csv(os.path.join(izleme.VERI, "katki3_A.csv"), index=False)
+    pd.to_pickle(dict(B=B, C=C, F=F, G=G, H=H), os.path.join(izleme.VERI, "katki3_parca.pkl"))
+    if IZGARA:
+        rows = []
+        for key, yl in A.items():
+            for y in (2025, 2026):
+                rows.append(dict(aday=key[0], giris=key[2], k=key[3], R=key[4], H=key[5], yil=y, **TS.ozet(yl[y])))
+        DA = pd.DataFrame(rows)
+        DA.to_csv(os.path.join(izleme.VERI, "katki3_A.csv"), index=False)
+    else:
+        DA = pd.read_csv(os.path.join(izleme.VERI, "katki3_A.csv"))
     kar = []
     for ad in DA["aday"].unique():
         d = DA[DA["aday"] == ad]
