@@ -807,3 +807,25 @@ Kullanıcı: "6 katmanın yeterli olduğundan emin misin?" Katmanlar 12'ye çık
 - F4'te 1 dk mumlardan tahmin edilen makas olayların yaklaşık %70'inde sıfır çıktı. Kapsam bu yüzden %50 değil %30.
 - Taramada 1 dk'da maliyeti aşan bir kenar gösteren yayın bulunamadı. Ulaşılan kaynaklar yalnızca özetlerdi.
 - Asimetri literatürle uyumlu: Negatif getiriler daha hızlı geri dönüyor, pozitif getiriler daha kalıcı (Corbet ve Katsiampa 2020; Saef ve ark. 2024). VSP'nin SAT tarafının zayıf olması bununla açıklanabilir.
+
+**Pine denetimi ve pivot eşitlik kuralı (v6.4.1; `pivot_esitlik.py`):**
+- v6.4.0'daki Pine kodu bağımsız ajanlarla denetlendi. Derleme ya da repaint hatası bulunmadı.
+- Pine mantığının Python taklidi 22 paritenin tamamında `k3_seviye._tl` ile aynı sonucu verdi: 121.108 AL ve 120.868 SAT sinyalinde 0 fark. 990 mumluk geçmiş sınırına hiç ulaşılmadı; en büyük ofset 578.
+- **Bulunan sorun: pivot eşitlik kuralı.**
+  - Testlerdeki `topluluk_sinyal.pivot`: solda eşit değer pivotu iptal eder, sağda etmez.
+  - Üçüncü taraf kaynaklara göre TradingView'in `ta.pivothigh/pivotlow` fonksiyonu tersini uygular. Kaynaklar: LuxAlgo/PineTS PR #322 (TradingView çıktısından alınmış test tablosu) ve bağımsız bir port. Grafikte doğrulanamadı.
+  - Fark, tick'i kaba paritelerde büyük. Örneğin NEAR'da trend çizgisi olaylarının bir kısmı farklı çıkıyor.
+- **Çözüm:** VSP v6.4.1, Pine'da testteki kuralı birebir uygulayan kendi pivot fonksiyonunu (`pvPivot`) kullanıyor. Bu fonksiyon trend çizgisinde ve uyumsuzlukta kullanılıyor. Python taklidiyle NEAR'ın 120.000 mumunda 0 fark çıktı.
+- **Duyarlılık:** Sonuçlar iki kuralla da hemen hemen aynı. Seçilmiş ayarlar: piyasa girişi, k 1, R 2, H 30.
+
+| Sinyal | Kural | Brüt bp 2025 / 2026 | t 2025 / 2026 | SAT bp 2025 / 2026 |
+|---|---|---|---|---|
+| Trend çizgisi kırılımı | test | +1,27 / +0,69 | 4,8 / 3,1 | +1,21 / +1,46 |
+| Trend çizgisi kırılımı | TradingView | +1,30 / +0,59 | 4,9 / 2,9 | +1,26 / +1,25 |
+| Uyumsuzluk | test | +0,30 / +0,47 | 2,3 / 3,5 | +0,99 / +0,86 |
+| Uyumsuzluk | TradingView | +0,36 / +0,42 | 2,7 / 3,4 | +1,07 / +0,80 |
+
+- Uyumsuzlukta da kazanç SAT tarafında (negatif uyumsuzluk), AL tarafı yaklaşık 0. Trend çizgisinde olduğu gibi, 1 dk'da tepeden satış işaretleri dipten alış işaretlerinden daha tutarlı. VSP'nin ana AL etiketi ise bunun tersi.
+- **Düşük riskler:**
+  - Döngü yükü 5.000 mumda en fazla yaklaşık 2,9 milyon yineleme. Zaman aşımı olası görünmüyor ama TradingView'da ölçülmedi. Kapatılan katmanın hesabı artık duruyor.
+  - Canlı mumda çizilen çizgi o mumun kapanışında sınanan seviyeyi gösteriyor (v6.4.1).
