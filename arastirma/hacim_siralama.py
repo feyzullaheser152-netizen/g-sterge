@@ -2,7 +2,8 @@
 
 Kaynak: data.binance.vision (Binance'in resmi herkese acik arsivi). Kapanmis (delist edilmis) semboller dahil, arsivde bulunan her sembol.
 Olcu: gunluk (1d) mumlarin quote_volume sutunu (USDT ya da USDC cinsinden islem hacmi); aylik zip dosyalarindan, icinde bulunulan ay icin gunluk zip dosyalarindan.
-Not: Arsivdeki 1mo (aylik mum) dosyalari 2023-06'da biter ve bazi aylari eksiktir; bu yuzden 1d kullanilir. Arsiv 2020-01'de baslar (Binance vadeli 2019-09'da acildi).
+Not: Arsivdeki 1mo (aylik mum) dosyalari 2023-06'da biter ve bazi aylari eksiktir; bu yuzden 1d kullanilir. Mum arsivi 2020-01'de baslar; 2019 aylari
+(BTCUSDT 2019-09'dan, ETHUSDT 2019-11'den, BCHUSDT 2019-12'den) islem (trades) dosyalarindaki quote_qty toplamindan eklenir.
 Liste S3 dizin listesinden alinir (s3-ap-northeast-1.amazonaws.com/data.binance.vision). COIN-M (coin teminatli) dahil degildir.
 Kullanim: VSP_VERI=<klasor> python3 arastirma/hacim_siralama.py
 Cikti: <VSP_VERI>/hacim/aylik_hacim.csv (sembol, ay, quote_volume) ve ekranda siralama.
@@ -81,6 +82,25 @@ def sembol_dosyalari(sym):
     return [k for k in k1 + k2 + k3 if k.endswith(".zip")]
 
 
+def trades_2019(sym):
+    """Mum arsivinden onceki 2019 aylari: trades dosyalarinda quote_qty (4. sutun) toplami. Cikti: [(ay, hacim)]."""
+    _, ks = listele(f"data/futures/um/monthly/trades/{sym}/{sym}-trades-2019", delimiter=False)
+    out = []
+    for k in sorted(x for x in ks if x.endswith(".zip")):
+        yerel = os.path.join(KLASOR, "zip", k.replace("/", "_"))
+        if not os.path.exists(yerel):
+            r = ses().get(URL + k, timeout=600)
+            r.raise_for_status()
+            open(yerel + ".part", "wb").write(r.content)
+            os.replace(yerel + ".part", yerel)
+        with zipfile.ZipFile(yerel) as z:
+            ad = z.namelist()[0]
+            bas = z.open(ad).read(20).startswith(b"id")
+            top = sum(ch.iloc[:, 0].sum() for ch in pd.read_csv(z.open(ad), header=0 if bas else None, usecols=[3], chunksize=2_000_000))
+        out.append((re.search(r"-(\d{4}-\d{2})\.zip$", k).group(1), float(top)))
+    return out
+
+
 def main():
     os.makedirs(os.path.join(KLASOR, "zip"), exist_ok=True)
     pre, _ = listele("data/futures/um/monthly/klines/")
@@ -117,6 +137,15 @@ def main():
     dolu = (A.eksik > 0) & A.q1mo.notna()
     A["hacim"] = np.where(dolu, A.q1mo, A.q1d)
     A["kalan_eksik"] = np.where(dolu, 0, A.eksik)
+    A["kaynak"] = np.where(dolu, "1mo", "1d")
+    ilk_ay = A.groupby("sembol").ay.min()
+    ek = []
+    for sym in ilk_ay[ilk_ay == "2020-01"].index:
+        for ay, q in trades_2019(sym):
+            ek.append(dict(sembol=sym, ay=ay, q1d=np.nan, n=0, g0=0, beklenen=0, eksik=0, q1mo=np.nan, hacim=q, kalan_eksik=0, kaynak="trades"))
+    if ek:
+        A = pd.concat([A, pd.DataFrame(ek)], ignore_index=True)
+        print("2019 trades eki (milyar $):", pd.DataFrame(ek).groupby("sembol").hacim.sum().div(1e9).round(2).to_dict(), flush=True)
     A.to_csv(os.path.join(KLASOR, "aylik_hacim.csv"), index=False)
     ortak = A[A.q1mo.notna() & (A.eksik == 0)]
     print(f"Kontrol (eksiksiz aylarda 1mo / 1d): {ortak.q1mo.sum() / ortak.q1d.sum():.6f}; en buyuk ay farki %{(ortak.q1mo / ortak.q1d - 1).abs().max() * 100:.3f}", flush=True)
@@ -124,7 +153,7 @@ def main():
     songun = G.gun.max()
     hacimli_son = G[G.q > 0].groupby("sembol").gun.max()  # kapanan sembollerde arsiv sifir hacimli dosya uretmeye devam edebiliyor (or. FTMUSDT)
     T = A.groupby("sembol").agg(toplam=("hacim", "sum"), ilk=("ay", "min"), son=("ay", "max"), ay_sayisi=("ay", "nunique"), tamamlanan_ay=("hacim", lambda x: 0), kalan_eksik_gun=("kalan_eksik", "sum"))
-    T["tamamlanan_ay"] = A[dolu].groupby("sembol").size().reindex(T.index).fillna(0).astype(int)
+    T["tamamlanan_ay"] = A[A.kaynak == "1mo"].groupby("sembol").size().reindex(T.index).fillna(0).astype(int)
     T["son_gun"] = pd.to_datetime(hacimli_son.reindex(T.index), unit="D").dt.strftime("%Y-%m-%d")
     T["durum"] = np.where(hacimli_son.reindex(T.index) >= songun - 2, "islemde", "kapandi")
     T = T.sort_values("toplam", ascending=False)
