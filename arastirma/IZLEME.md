@@ -2,7 +2,7 @@
 
 Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosya `arastirma/izleme.py` ile üretilir: Göstergenin dayandığı her bulgu ay ay yeniden ölçülür.
 
-- **Son çalıştırma:** 2026-10-10 15:58 UTC
+- **Son çalıştırma:** 2026-10-10 16:08 UTC
 - **Veri:** 22 Binance USDT-M paritesi, 2025-01 – 2026-10-08.
 - **Durum pencereleri (yalnızca tam aylar):** son 3 tam ay (2026-07 – 2026-09); turuncu uyarı ve FOMC için son 12 tam ay (2025-10 – 2026-09). Eksik ay seride gösterilir, duruma girmez: 2026-10.
 - **Yenileme:** `python3 arastirma/izleme.py guncelle`, ardından `python3 arastirma/izleme.py rapor`. Her ay başında çalıştırılmalı.
@@ -42,6 +42,7 @@ Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosy
 | Ölçü | Değer | Sonuç | Kural |
 |---|---|---|---|
 | LONG kovalama, 5 dk kayıp (göstergede yok) | +1,18 bp (t 0,9) | gerek yok | son 12 tam ay; ≥ +1 bp ve t ≥ 2 olursa ön kayıtlı testle yeniden sına |
+| Yapısal stop: son 10 mum dibi/tepesi − 0,1σ, R farkı (göstergede yok) | +0,021 R (t 1,5) | gerek yok | son 12 tam ay; 2σ stopa göre ≥ +0,01 R ve t ≥ 3 olursa ön kayıtlı testle yeniden sına |
 | Fonlama −3..+2 dk (göstergede yok) | ×1,02 | gerek yok | son 3 tam ay; ≥ ×1,5 olursa yeniden sına |
 
 ## Bekleyen ön kayıtlı test: karışım oynaklık tahmini (BULGULAR 10d)
