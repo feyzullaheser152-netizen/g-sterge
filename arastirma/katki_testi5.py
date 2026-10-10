@@ -11,6 +11,10 @@ Gostergeler (kullanici Ekim 2026'da gonderdi; daha once sinanmadilar):
   k5_vdelta   : Volume Delta Pivot Matrix [BigBeluga] (CC BY-NC-SA 4.0). Pivot (5,5) seviyeleri, pivot cevresindeki 11 mumun kapanis konumuyla
                 agirliklandirilmis hacim deltasi; kapanis seviyeyi gecince seviye silinir.
   k5_trinity  : Trinity Reversal Pattern [AlgoAlpha] (MPL 2.0). Uc mumluk donus formasyonu ve formasyon ucundaki seviye (100 mum gecerli).
+  k5_rsise    : RSI Signals Entries [Michael_Fx_Trader] ("All rights reserved"; acik lisans yok, yalnizca arastirma). RSI 14 bolge durum makinesi:
+                asiri bolgeye (79,9 / 19,9) giris ya da direnc/destek bolgesinde (67,9 / 34,9) guclu mum (govde >= 1,2 x 20 mum ortalamasi);
+                her bolge ziyaretinde bir kez. Duz RSI daha once sinandi (BULGULAR 6: yon bilgisi ters ve maliyetin altinda); bu tanim yeni.
+                Gostergenin pip tabanli stop/hedefi (70/80 pip, FX icin) kriptoya uymadigi icin sinanmaz.
 Mantik uyarlamasi; kod kopyalanmadi, yalnizca arastirma icindir. Her modul bagimsiz bir ajanla Pine koduna karsi dogrulanir (scratchpad/k5_kaynak).
 
 ON KAYIT (sonuclardan once yazildi; esikler katki_testi3 ile ayni).
@@ -36,10 +40,13 @@ Sinyaller (1. katman):
           eskiye en fazla 10 tane (gostergenin son mumda uyguladigi filtre her mumda o anki aktif seviyelerle).
   TRIN  : Trinity formasyonu (boga AL / ayi SAT).
   TRINT : Trinity seviyesine dokunus (gostergenin alarmi: boga seviyesi AL / ayi seviyesi SAT; ikisi birden ise yok).
+  RSISE : RSI SE son sinyali (finalBuySignal AL / finalSellSignal SAT).
+  RSIX  : yalnizca asiri bolge sinyalleri (Over Sold AL / Over Buy SAT).   RSIZ: yalnizca bolge + guclu mum sinyalleri (Support AL / Resistance SAT).
   Hepsi 54 ayarlik izgarada (TS.sim_izgara). Kural: 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
   Ek (yerel cikis, ayni kural): BFLIP gostergenin kendi pozisyonuyla: sonraki mumun acilisinda giris, NATIVE stop (gostergenin yapisal stopu),
   cikis stop ya da ters donus (donus mumundan sonraki acilis), en fazla 240 mum. R = brut / (stop mesafesi / giris).
-2) Filtre (VSP islemleri; v6.1 sinyali, piyasa girisi, stop 2 sigma15, hedef 2R, 5 dk): D ve U durumlari ve uyum (W:) durumlari:
+2) Filtre (VSP islemleri; v6.1 sinyali, piyasa girisi, stop 2 sigma15, hedef 2R, 5 dk): D ve U durumlari (RSI SE: "RSI bölgesi", +1 RSI <= 34,9,
+  -1 RSI >= 67,9) ve uyum (W:) durumlari:
   "W:Wyckoff SC/Spring/C testi son 15 mumda (islem yonunde)", "W:Profil seviyesine dokunus son 5 mumda (islem yonunde)".
   Kural (katki_testi2 ile ayni): iki yilda ayni isaret, |fark| >= 1 bp, |t| >= 2 (2025) ve >= 3 (2026), kapsam %20-80.
 3) Oynaklik bilgisi: R2 artisi iki yilda >= 0,005.
@@ -60,10 +67,10 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import katki_testi3 as K3
-import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity
+import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity]
+MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise]
 IZGARA = os.environ.get("K5_IZGARA", "1") != "0"
 
 
