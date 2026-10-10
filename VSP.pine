@@ -1,5 +1,5 @@
 //@version=6
-// Vadeli Scalp Pusulasi (VSP) - v6.2.0 | 1 dakika piyasa gostergesi
+// Vadeli Scalp Pusulasi (VSP) - v6.3.0 | 1 dakika piyasa gostergesi
 // Kullanicinin istegiyle AL/SAT, stop, hedef ve pozisyon buyuklugu onerisi geri geldi (v6.0). Grafikte tablo ya da kutu yoktur. Bilgi dort yoldan verilir:
 //   1) AL/SAT etiketi (mum kapanisinda): dipten al, tepeden sat. Sert 15 dk dususten sonra AL, sert 15 dk yukselisten sonra SAT (geri donus). Stop ve hedef cizgileri, etikette miktar.
 //      Dayanak: arastirmada tutarli cikan tek yon etkisi (BULGULAR 3, 10c, 14). v6.1: kullanici komisyonu onemsemiyor; ayarlar komisyonsuz (brut) 2025 sonucuyla secildi:
@@ -9,10 +9,10 @@
 //   3) Arka plan: mor = olagandisi oynaklik (zamanlanmis olay, asiri mumdan sonraki 4 mum, iki yonde sert akis);
 //      kirmizi = FOMC aciklamasinin ilk dakikalari ve CPI / Istihdam Raporu (NFP) gunlerinde 08:30 ET mumu;
 //      turuncu = sert satis akisinin hemen ardindaki mum (bu mumda SHORT kovalamak ortalamada dezavantajli).
-//   4) Cizgiler: SMA20 (yonune gore yesil/kirmizi; renk donusu kucuk ama tutarli bir sinyal), VWAP ve +-2 sigma bantlari,
+//   4) Cizgiler ve isaretler: SMA20 (yonune gore yesil/kirmizi), uyumsuzluk ucgenleri (10 gostergede normal uyumsuzluk), VWAP ve +-2 sigma bantlari,
 //      onceki gun yuksek/dusuk, Asya seansi yuksek/dusuk. Seviye cizgileri yalnizca bilgi icindir; testlerde rastgele seviyelerden daha iyi tutmadi.
 // Dayanak: 22 Binance vadeli paritesi, 21 ay (arastirma/BULGULAR.md, bolum 10-14).
-indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500)
+indicator("Vadeli Scalp Pusulası", shorttitle = "VSP", overlay = true, max_labels_count = 500, max_bars_back = 1000)
 
 // === Girdiler ===
 grpS = "AL/SAT, stop ve pozisyon"
@@ -41,6 +41,7 @@ showLevels = input.bool(true, "VWAP ve günlük seviyeler", group = grpV, displa
 showVolBg  = input.bool(true, "Olağandışı oynaklıkta arka plan", group = grpV, display = display.none)
 showFlowBg = input.bool(true, "Sert satış akışından sonra arka plan", group = grpV, display = display.none)
 showSma    = input.bool(true, "SMA20 (yönüne göre renk)", group = grpV, display = display.none)
+showDiv    = input.bool(true, "Uyumsuzluk işaretleri (10 gösterge)", group = grpV, display = display.none)
 
 // Karanlik mod icin acik renkler
 cVwap   = #FFD54F
@@ -286,6 +287,86 @@ tradeOn = pos != 0 or pend != 0 or exitNow
 sma20 = ta.sma(close, 20)
 smaUp = sma20 >= sma20[2]
 
+// Uyumsuzluk: "Divergence for Many Indicators v4" (LonesomeTheBlue, MPL 2.0) mantiginin uyarlamasi. Normal uyumsuzluk, kapanis pivotlari (5), onay bekler,
+// 10 gosterge: MACD, MACD histogram, RSI, Stokastik, CCI, Momentum, OBV, VW-MACD, CMF, MFI. Ilk pozitif uyumsuzluk mumu yesil, ilk negatif kirmizi ucgen.
+// Test (komisyonsuz, 22 parite): iki yilda da kucuk ama tutarli brut kazanc, +0,3 / +0,5 bp (arastirma/katki_testi2.py, BULGULAR 16).
+dvPh = ta.pivothigh(close, 5, 5)
+dvPl = ta.pivotlow(close, 5, 5)
+var array<int> dvPhPos = array.new_int(20, 0)
+var array<float> dvPhVal = array.new_float(20, 0.0)
+var array<int> dvPlPos = array.new_int(20, 0)
+var array<float> dvPlVal = array.new_float(20, 0.0)
+if not na(dvPh)
+    array.unshift(dvPhPos, bar_index)
+    array.unshift(dvPhVal, dvPh)
+    array.pop(dvPhPos)
+    array.pop(dvPhVal)
+if not na(dvPl)
+    array.unshift(dvPlPos, bar_index)
+    array.unshift(dvPlVal, dvPl)
+    array.pop(dvPlPos)
+    array.pop(dvPlVal)
+dvPos(float src) =>
+    int found = 0
+    if src > src[1] or close > close[1]
+        for x = 0 to 9
+            int len = bar_index - array.get(dvPlPos, x) + 5
+            if array.get(dvPlPos, x) == 0 or len > 100
+                break
+            if len > 5 and src[1] > src[len] and close[1] < array.get(dvPlVal, x)
+                float s1 = (src[1] - src[len]) / (len - 1)
+                float v1 = src[1] - s1
+                float s2 = (close[1] - close[len]) / (len - 1)
+                float v2 = close[1] - s2
+                bool ok = true
+                for y = 2 to len - 1
+                    if src[y] < v1 or close[y] < v2
+                        ok := false
+                        break
+                    v1 -= s1
+                    v2 -= s2
+                if ok
+                    found := 1
+                    break
+    found
+dvNeg(float src) =>
+    int found = 0
+    if src < src[1] or close < close[1]
+        for x = 0 to 9
+            int len = bar_index - array.get(dvPhPos, x) + 5
+            if array.get(dvPhPos, x) == 0 or len > 100
+                break
+            if len > 5 and src[1] < src[len] and close[1] > array.get(dvPhVal, x)
+                float s1 = (src[1] - src[len]) / (len - 1)
+                float v1 = src[1] - s1
+                float s2 = (close[1] - close[len]) / (len - 1)
+                float v2 = close[1] - s2
+                bool ok = true
+                for y = 2 to len - 1
+                    if src[y] > v1 or close[y] > v2
+                        ok := false
+                        break
+                    v1 -= s1
+                    v2 -= s2
+                if ok
+                    found := 1
+                    break
+    found
+[dvMacd, dvSig, dvHist] = ta.macd(close, 12, 26, 9)
+dvRsi  = ta.rsi(close, 14)
+dvStk  = ta.sma(ta.stoch(close, high, low, 14), 3)
+dvCci  = ta.cci(close, 10)
+dvMom  = ta.mom(close, 10)
+dvObv  = ta.obv
+dvVwm  = ta.vwma(close, 12) - ta.vwma(close, 26)
+dvCmfm = high > low ? ((close - low) - (high - close)) / (high - low) : 0.0
+dvCmf  = ta.sma(dvCmfm * volume, 21) / ta.sma(volume, 21)
+dvMfi  = ta.mfi(close, 14)
+dvPosN = dvPos(dvMacd) + dvPos(dvHist) + dvPos(dvRsi) + dvPos(dvStk) + dvPos(dvCci) + dvPos(dvMom) + dvPos(dvObv) + dvPos(dvVwm) + dvPos(dvCmf) + dvPos(dvMfi)
+dvNegN = dvNeg(dvMacd) + dvNeg(dvHist) + dvNeg(dvRsi) + dvNeg(dvStk) + dvNeg(dvCci) + dvNeg(dvMom) + dvNeg(dvObv) + dvNeg(dvVwm) + dvNeg(dvCmf) + dvNeg(dvMfi)
+divBull = dvPosN > 0 and nz(dvPosN[1]) == 0 and dvNegN == 0
+divBear = dvNegN > 0 and nz(dvNegN[1]) == 0 and dvPosN == 0
+
 // === Cizimler (en kalin, acik renkler) ===
 // Gun degisiminde (00:00 UTC) ilk mumda cizgi kesilir; boylece eski ve yeni gun degerleri dikey bir cizgiyle birlesmez
 dayOn = showLevels and not newDay
@@ -297,6 +378,8 @@ plot(dayOn ? pdl : na, "Önceki gün düşük", cDay, 4, plot.style_linebr, line
 plot(showLevels ? asiaHi : na, "Asya yüksek", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 plot(showLevels ? asiaLo : na, "Asya düşük", cAsia, 4, plot.style_linebr, linestyle = plot.linestyle_dashed, display = display.pane)
 plot(showSma ? sma20 : na, "SMA20", smaUp ? cGood : cBad, 4, display = display.pane)
+plotshape(showDiv and divBull and barstate.isconfirmed, "Pozitif uyumsuzluk", shape.triangleup, location.belowbar, cGood, size = size.tiny, display = display.pane)
+plotshape(showDiv and divBear and barstate.isconfirmed, "Negatif uyumsuzluk", shape.triangledown, location.abovebar, cBad, size = size.tiny, display = display.pane)
 plot(tradeOn ? stopP : na, "Stop", cSell, 3, plot.style_linebr, display = display.pane + display.data_window)
 plot(tradeOn ? tgtP : na, "Hedef", cBuy, 3, plot.style_linebr, display = display.pane + display.data_window)
 

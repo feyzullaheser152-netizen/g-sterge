@@ -687,3 +687,45 @@ Kullanıcı: "Özgün bir gösterge oluşturuyoruz; katkısı olacak her şeyi k
 - Örnek: Supertrend, UT Bot, MACD, Lorentzian tahmini ve çekirdek eğimi, Squeeze, ADX, killzone'lar, order block ve likidite bölgeleri: farklar bir yıl pozitif, ertesi yıl negatif ya da kapsam çok dar (VSP AL sert düşüşten sonra geldiği için trend göstergeleri neredeyse her zaman ters yönde).
 
 **C) Oynaklık bilgisi:** Hiçbir durum R² artışında 0,005'e ulaşmadı. En yüksek: Squeeze açık 0,0009 / 0,0027; NY sabah killzone 0,0010 / 0,0012.
+
+## 16. Katkı testi, ikinci grup ve bütün katmanlar (`katki_testi2.py`)
+
+Kullanıcı: "1 dakikalık grafikte görülmesi gereken tüm katmanlarda tüm kodları ele al." İkinci gruptaki 11 gösterge ve birinci gruptakilerin hepsi altı katmanda sınandı. Komisyon sıfır; ön kayıt sonuçlardan önce commit'lendi.
+
+**1) Sinyal** (kural: 2025 R > 0, t ≥ 2; 2026 R > 0, t ≥ 3):
+
+| Aday | Brüt bp 2025 / 2026 | t 2025 / 2026 | Sonuç |
+|---|---|---|---|
+| **Divergence for Many Indicators v4** (10 gösterge, normal uyumsuzluk) | +0,30 / +0,47 | 2,3 / 3,5 | **Geçti** (piyasa, k 1, R 2, H 30) |
+| Candlestick Patterns [repo32] | +0,20 / +0,10 | 3,7 / 2,3 | 2026'da eşiğin altında |
+| Buyside & Sellside Liquidity, süpürme dönüşü | +0,72 / +0,32 | 2,0 / 2,2 | 2026'da eşiğin altında |
+| Order & Breaker Blocks [LuxAlgo], OB dönüşü | +0,20 / +0,37 | 1,5 / 2,2 | Geçmedi |
+| Fibonacci Bollinger Bands | +0,85 / +1,16 | 0,9 / 2,0 | Geçmedi (az olay, gürültülü) |
+| ML Adaptive SuperTrend, ICT MSS, SuperTrend AI, CM SlingShot, AlgoAlpha kanal kırılımı, likidite devamı, breaker dönüşü | −0,2 ile +0,6 | | Geçmedi |
+
+- Yerel çıkışlar (ters sinyale kadar tutma) MLST, ICT, STAI ve SlingShot'ta negatif (−0,6 ile −1,8 bp).
+- **Uygulama (v6.3):** Uyumsuzluk işaretleri (ilk pozitif uyumsuzluk mumunda yeşil, negatifte kırmızı küçük üçgen). Kazanç VSP AL'ın onda biri; ana sinyal değil.
+
+**2) Filtre:** 53 durumun hiçbiri kabul edilmedi.
+
+**3) Oynaklık bilgisi:** Hiçbiri 0,005'e ulaşmadı. En yüksek: ML Adaptive SuperTrend "düşük oynaklık kümesi" 0,0029 / 0,0046; ICT displacement mumu 0,0016 / 0,0010.
+
+**4) Yön bilgisi** (durum +1 iken −1'e göre sonraki 15 dk, bp): Hiçbiri kabul edilmedi (eşik ≥ 1 bp).
+- Tutarlı bir örüntü var ama eşiğin altında: Trend göstergelerinin yönü sonraki 15 dakikada hafif tersine işliyor. ICT MSS yönü −0,99 / −0,97 bp (t −2,9 / −3,5), Squeeze momentum −1,3 / −0,9, Supertrend, SuperTrend AI, ML Adaptive SuperTrend, DI ve SMA20 −0,6 ile −1,0. Bölüm 6'daki bulguyla aynı: 1 dk'da trend göstergeleri kısa vadeli dönüş etkisinin başka ölçümleri.
+
+**5) Seviyeler:** Bölge/seviye dokunuşları 1. katmanda sinyal olarak sınandı (Liquidity Swings, iki OB göstergesi, Order & Breaker Blocks, breaker, Fibonacci BB, Nadaraya-Watson, likidite, SR kanalları, ChartPrime kutuları, killzone tepe/dipleri). Hiçbiri kuralı geçmedi.
+
+**6) Çıkış** (VSP olaylarının hepsi, eşleştirilmiş; temel: stop 2σ, hedef 2R, 5 dk; temel brüt +1,68 / +0,43 bp): Hiçbir izleyen stop temelden iyi değil.
+
+| Çıkış | Fark bp 2025 / 2026 |
+|---|---|
+| Supertrend (10, 3) | −0,81 / −0,05 |
+| UT Bot | −0,60 / −0,45 |
+| SuperTrend AI | −0,72 / −0,24 |
+| ML Adaptive SuperTrend | −0,77 / −0,01 |
+| SMA20 yönü | −0,50 / +0,05 |
+| SlingShot trendi | −1,58 / −0,31 |
+| Lorentzian çekirdek eğimi | −0,84 / −0,26 |
+| Yalnızca 30 mum sabit | −2,40 / +0,68 |
+
+- Sonuç: VSP sinyalinin etkisi ilk dakikalarda; 5 dakikalık çıkış en iyisi olarak kalıyor.
