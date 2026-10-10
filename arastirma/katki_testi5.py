@@ -15,6 +15,9 @@ Gostergeler (kullanici Ekim 2026'da gonderdi; daha once sinanmadilar):
                 asiri bolgeye (79,9 / 19,9) giris ya da direnc/destek bolgesinde (67,9 / 34,9) guclu mum (govde >= 1,2 x 20 mum ortalamasi);
                 her bolge ziyaretinde bir kez. Duz RSI daha once sinandi (BULGULAR 6: yon bilgisi ters ve maliyetin altinda); bu tanim yeni.
                 Gostergenin pip tabanli stop/hedefi (70/80 pip, FX icin) kriptoya uymadigi icin sinanmaz.
+  k5_afstochz : AF_StochZ_Overlay (lisans ve yazar belirtilmemis). Uyarlanabilir boylu (ER ile 8-34) stokastik, Fisher donusumu ve 20 mumluk Z-skoru;
+                Z pivotu (-1/+1 otesi) ardindan 5 mum icinde fiyat pivotu (3/2) -> lider sinyal; fiyat pivotlariyla normal ve gizli uyumsuzluk.
+                Duz stokastik (BULGULAR 6) ve uyumsuzluk (BULGULAR 16, Divergence for Many Indicators; VSP v6.3) daha once sinandi; bu tanim yeni.
 Mantik uyarlamasi; kod kopyalanmadi, yalnizca arastirma icindir. Her modul bagimsiz bir ajanla Pine koduna karsi dogrulanir (scratchpad/k5_kaynak).
 
 ON KAYIT (sonuclardan once yazildi; esikler katki_testi3 ile ayni).
@@ -42,11 +45,14 @@ Sinyaller (1. katman):
   TRINT : Trinity seviyesine dokunus (gostergenin alarmi: boga seviyesi AL / ayi seviyesi SAT; ikisi birden ise yok).
   RSISE : RSI SE son sinyali (finalBuySignal AL / finalSellSignal SAT).
   RSIX  : yalnizca asiri bolge sinyalleri (Over Sold AL / Over Buy SAT).   RSIZ: yalnizca bolge + guclu mum sinyalleri (Support AL / Resistance SAT).
+  AFLD  : StochZ lider sinyali (Lead BUY AL / SELL SAT).    AFRD: normal uyumsuzluk (R-Bull AL / R-Bear SAT).    AFHD: gizli uyumsuzluk (H-Bull / H-Bear).
+  AFLB  : StochZ butun etiketleri (herhangi bir boga etiketi AL / ayi etiketi SAT). AF* sinyalleri fiyat pivotunun onay mumunda tarihlenir
+          (etiket 2 mum geriye cizilir); ayni mumda iki yon ise yok.
   Hepsi 54 ayarlik izgarada (TS.sim_izgara). Kural: 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
   Ek (yerel cikis, ayni kural): BFLIP gostergenin kendi pozisyonuyla: sonraki mumun acilisinda giris, NATIVE stop (gostergenin yapisal stopu),
   cikis stop ya da ters donus (donus mumundan sonraki acilis), en fazla 240 mum. R = brut / (stop mesafesi / giris).
 2) Filtre (VSP islemleri; v6.1 sinyali, piyasa girisi, stop 2 sigma15, hedef 2R, 5 dk): D ve U durumlari (RSI SE: "RSI bölgesi", +1 RSI <= 34,9,
-  -1 RSI >= 67,9) ve uyum (W:) durumlari:
+  -1 RSI >= 67,9; AF_StochZ: "StochZ bölgesi", +1 Z < -1, -1 Z > 1) ve uyum (W:) durumlari:
   "W:Wyckoff SC/Spring/C testi son 15 mumda (islem yonunde)", "W:Profil seviyesine dokunus son 5 mumda (islem yonunde)".
   Kural (katki_testi2 ile ayni): iki yilda ayni isaret, |fark| >= 1 bp, |t| >= 2 (2025) ve >= 3 (2026), kapsam %20-80.
 3) Oynaklik bilgisi: R2 artisi iki yilda >= 0,005.
@@ -67,10 +73,10 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import katki_testi3 as K3
-import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise
+import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise, k5_afstochz
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise]
+MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta, k5_trinity, k5_rsise, k5_afstochz]
 IZGARA = os.environ.get("K5_IZGARA", "1") != "0"
 
 
