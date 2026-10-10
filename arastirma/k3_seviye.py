@@ -234,7 +234,7 @@ def _bof(o, c, ph, pl, h_, l_, hgst, lwst, prd, bo_len, cwidthu, mintest):
 def _degisken_uc(x, maxlen, yuksek):
     """ta.highest/lowest(x, lll), lll = max(min(bar_index, maxlen), 1)."""
     n = len(x)
-    out = highest(x, maxlen) if yuksek else lowest(x, maxlen)
+    out = np.array(highest(x, maxlen) if yuksek else lowest(x, maxlen), dtype=np.float64)
     m = min(n, maxlen)
     if n > 0:
         out[0] = x[0]

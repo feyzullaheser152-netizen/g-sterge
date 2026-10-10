@@ -7,7 +7,9 @@ Kaynak gostergeler (varsayilan girdilerle):
 Mantık uyarlaması; kod kopyalanmadı, yalnızca araştırma içindir.
 
 Pine anlamina uyum notlari:
-  - ta.atr = Wilder RMA (topluluk_sinyal.rma; ilk mumlardaki tohum farki kabul edilebilir). AlphaTrend'in ATR'si sma(tr, 14) (RMA degil).
+  - ta.atr = Wilder RMA (topluluk_sinyal.rma; ilk mumlardaki tohum farki kabul edilebilir). AlphaTrend'in ATR'si sma(ta.tr, 14) (RMA degil).
+    ta.tr degiskeni ta.tr(false) demektir: ilk mumda na (ta.atr ise ta.tr(true) kullanir, ilk mum h-l). ta.sma na'yi yok sayip 14 gecerli
+    deger ister; bu yuzden AlphaTrend ATR'si ilk kez 14. mumda (0 tabanli) olusur.
   - CE: longStopPrev = nz(longStop[1], longStop); longStop[1] guncellenmis (:=) son degerdir. dir 'var', baslangic 1; dir[1] ilk mumda na.
   - PPST: lastpp = ph ? ph : pl ? pl : na ve 'if lastpp' (na ya da 0 yanlis). Pivot bilgisi onay mumunda (pivot mumundan R = 2 sonra) kullanilir.
     TUp/TDown her mumda na ile baslar; TUp[1]/TDown[1] ilk mumda na, karsilastirmalar yanlis. Trend onceki mumun TDown[1]/TUp[1] degerini kullanir;
@@ -161,7 +163,9 @@ def pine_mfi(src, v, n):
 
 
 def alphatrend(h, l, c, v, coeff=1.0, ap=14):
-    atr = sma(true_range(h, l, c), ap)
+    tr_f = true_range(h, l, c)
+    tr_f[0] = np.nan  # ta.tr degiskeni = ta.tr(false): onceki kapanis yokken na
+    atr = sma(tr_f, ap)  # pandas rolling(ap) ap gecerli deger ister = Pine ta.sma'nin na'yi yok saymasi (yalnizca ilk mum na)
     upT = l - atr * coeff
     downT = h + atr * coeff
     m = pine_mfi((h + l + c) / 3.0, v, ap)
