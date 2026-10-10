@@ -298,8 +298,11 @@ def rapor():
             else:
                 v, nn = o3[k]
                 sat.append(("Mor: " + k, f"×{tr(v)} (n {nn})", durum(v, 1.5, 1.2), "son 3 tam ay; ≥ ×1,5 tutuyor, ≥ ×1,2 zayıfladı"))
+        xs = T12[T12.sinyal == "Yapısal stop R farkı"].dropna(subset=["brut"])
+        ys = IS.kume_t(xs.brut, xs.gun)
         izle = [
             ("LONG kovalama, 5 dk kayıp (göstergede yok)", f"{tr(l5[0], 2, True)} bp (t {tr(l5[2], 1)})", "yeniden test et" if l5[0] >= 1.0 and l5[2] >= 2 else "gerek yok", "son 12 tam ay; ≥ +1 bp ve t ≥ 2 olursa ön kayıtlı testle yeniden sına"),
+            ("Yapısal stop: son 10 mum dibi/tepesi − 0,1σ, R farkı (göstergede yok)", f"{tr(ys[0], 3, True)} R (t {tr(ys[1], 1)})", "yeniden test et" if ys[0] >= 0.01 and ys[1] >= 3 else "gerek yok", "son 12 tam ay; 2σ stopa göre ≥ +0,01 R ve t ≥ 3 olursa ön kayıtlı testle yeniden sına"),
             ("Fonlama −3..+2 dk (göstergede yok)", f"×{tr(o3['Fonlama −3..+2 dk'][0])}", "yeniden test et" if o3["Fonlama −3..+2 dk"][0] >= 1.5 else "gerek yok", "son 3 tam ay; ≥ ×1,5 olursa yeniden sına"),
         ]
         return w3, w12, sat, izle

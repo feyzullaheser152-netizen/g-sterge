@@ -12,7 +12,7 @@
 | Etiket | Ne zaman | Beklenti |
 |---|---|---|
 | **AL** (yeşil, mumun altında) | Dip: son 15 dakikada sert düşüş (z ≤ −3) ve satış akışı; önceki 15 dakikada benzeri yok | Kısa vadeli geri dönüş (yukarı) |
-| **SAT** (kırmızı, mumun üstünde) | Tepe: son 15 dakikada sert yükseliş (z ≥ +3) ve alış akışı | Kısa vadeli geri dönüş (aşağı) |
+| **SAT** (kırmızı, mumun üstünde) | Tepe: son 15 dakikada sert yükseliş (z ≥ +3) ve alış akışı | Kısa vadeli geri dönüş (aşağı). Testte avantaj yok; izlemede bozuk (aşağıya bakın). Tepeden satış için trend çizgisi SAT oku daha iyi. |
 
 - **Giriş:** Varsayılan piyasa emri, sinyalden sonraki mumun açılışında. Ayarlardan limit emre geçilebilir (limit, fiyat aleyhe giderken dolduğu için brüt sonucu kötüleştirir).
 - **Stop:** Girişten 2 × (15 dk oynaklık) uzakta (kırmızı çizgi).
@@ -115,7 +115,12 @@
   - "Coine özel / piyasa geneli" ayrımı.
   - v5.7: Mumlardan makas tahmini (EDGE; büyük paritelerde makası 10–14 kat fazla gösteriyor), olay anında makas çarpanı (gerçek makas olay anlarında çoğunlukla yalnızca ×1,0–1,1 açılıyor), Deribit Cuma vadesi (×0,9–1,3), başabaş ufku (hareket / maliyetle aynı bilgi).
   - Hiçbiri 1 dakikalık grafikte maliyeti aşan ya da tutarlı bilgi vermedi. Ayrıntı: `arastirma/BULGULAR.md`, bölüm 6–14.
-- **Sürekli izleme:** Her bulgu ay ay yeniden ölçülür (`arastirma/IZLEME.md`). Ekim 2026 itibarıyla göstergedeki tüm özellikler "TUTUYOR".
+- **Sürekli izleme:** Her bulgu ay ay yeniden ölçülür (`arastirma/IZLEME.md`). Ekim 2026 itibarıyla (son 12 tam ay, 2025-10 – 2026-09):
+  - Oynaklık, beklenen hareket ve turuncu uyarı: "TUTUYOR".
+  - Trend çizgisi kırılımı: "TUTUYOR" (+0,8 bp, t 2,7). SAT oku +1,4 bp (t 3,1).
+  - AL etiketi: "ZAYIFLADI". Hâlâ pozitif (+2,1 bp), ama son 12 ayda istatistiksel güven düşük (t 1,3).
+  - SMA20 ve uyumsuzluk: "ZAYIFLADI" (+0,1 ile +0,3 bp, t 1,0–1,5).
+  - **SAT etiketi: "BOZULDU"** (0,0 bp; bir önceki pencerede "ZAYIFLADI"). Kurala göre Kasım 2026 kontrolünde de bozuk çıkarsa göstergeden kaldırılacak. Tepeden satış için trend çizgisi SAT okunu kullanın.
 
 ## Talimat Kartı
 

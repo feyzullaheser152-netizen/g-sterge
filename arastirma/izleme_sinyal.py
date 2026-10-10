@@ -6,6 +6,8 @@ Sinyaller ve ayarlari, eklendikleri testteki secilmis ayarlarla aynidir (komisyo
   SMA20 kesisimi   : mum SMA20'yi icinde keser (acilis bir yanda, kapanis diger yanda); piyasa, k 1, R 2, H 15.
   Uyumsuzluk       : Divergence for Many Indicators v4 (10 gosterge); piyasa, k 1, R 2, H 30.
   Trend cizgisi    : Trend Lines v2 cizgi kirilimi (k3_seviye.tlb2; BULGULAR 17); piyasa, k 1, R 2, H 30. Ayrica SAT oku ayri izlenir.
+Izlenen aday (gostergede yok; BULGULAR 17, 7. katman): yapisal stop (son 10 mumun dibi/tepesi - 0,1 sigma15) ile 2 sigma15 stopun R farki, VSP olaylarinda.
+  Son 12 tam ayda >= +0,01 R ve t >= 3 olursa on kayitli testle yeniden sinanir.
 Durum kurali (ON KAYIT, sonuclardan once yazildi; son 12 tam ay, gun kumelenmis t):
   VSP AL ve VSP SAT: brut >= +1 bp ve t >= 2 TUTUYOR; brut > 0 ZAYIFLADI; brut <= 0 BOZULDU.
   SMA20 donusu, SMA20 kesisimi, Uyumsuzluk, Trend cizgisi (ve SAT oku): brut > 0 ve t >= 2 TUTUYOR; brut > 0 ZAYIFLADI; brut <= 0 BOZULDU.
@@ -20,6 +22,7 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import k3_seviye
+import katki_testi3 as K3
 from topluluk_sinyal import sma, ema, highest, lowest, pivot
 
 SINYALLER = [("VSP AL", 1.0), ("VSP SAT", 1.0), ("SMA20 dönüşü", 0.0), ("SMA20 kesişimi", 0.0), ("Uyumsuzluk", 0.0), ("Trend çizgisi kırılımı", 0.0), ("Trend çizgisi SAT oku", 0.0)]
@@ -54,6 +57,14 @@ def parite(s):
     oi, oy, ob, on, orr = TS.sim_izgara(o, h, l, c, ixv, yv, sgv, np.zeros(len(ixv), bool), 2.0, 2.0, 5, False, 0.0, 0.0, 0.0, False)
     ekle("VSP AL", oi[oy > 0], oy[oy > 0], ob[oy > 0])
     ekle("VSP SAT", oi[oy < 0], oy[oy < 0], ob[oy < 0])
+    # izlenen aday: yapisal stop (katki_testi3 7. katman ile ayni)
+    m2 = ixv < n - 40
+    i2, y2, s2 = ixv[m2], yv[m2], sgv[m2]
+    ent = o[i2 + 1]
+    dd = np.where(y2 > 0, np.log(ent / (TS.lowest(l, 10)[i2] * np.exp(-0.1 * s2))), np.log(TS.highest(h, 10)[i2] * np.exp(0.1 * s2) / ent))
+    _, r_t = K3.stop_varyant(o, h, l, c, i2, y2, s2, 2.0 * s2)
+    _, r_y = K3.stop_varyant(o, h, l, c, i2, y2, s2, np.where(np.isfinite(dd), dd, np.nan))
+    out.append(pd.DataFrame({"ay": ay[i2], "gun": ts[i2] // 86400, "sym": s, "sinyal": "Yapısal stop R farkı", "brut": r_y - r_t}))
     # SMA20 (katki_testi CMT, CMC)
     s20 = sma(c, 20)
     mup = np.nan_to_num(s20 >= _sh(s20, 2)).astype(bool)
