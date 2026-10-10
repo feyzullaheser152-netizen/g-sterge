@@ -2,7 +2,8 @@
 
 Sinyaller ve ayarlari, eklendikleri testteki secilmis ayarlarla aynidir (komisyon sifir, BULGULAR 14b, 15, 16):
   VSP AL / VSP SAT : v6.1 sinyali, piyasa girisi, stop 2 sigma15, hedef 2R, en fazla 5 mum (olay engeli uygulanmis).
-  SMA20 donusu     : CM Ultimate MA, SMA20 yonu donunce; piyasa, k 1, R 2, H 15.
+  SMA20 donusu     : CM Ultimate MA, SMA20 yonu donunce; piyasa, k 1, R 2, H 15. v6.4.2'den beri gostergede ayrica gorunmuyor (SMA20 destek/direnc rengiyle
+                     ciziliyor); izlenenler listesinde, son 12 ayda brut > 0 ve t >= 3 olursa yeniden gorunume alinmasi dusunulur.
   SMA20 kesisimi   : mum SMA20'yi icinde keser (acilis bir yanda, kapanis diger yanda); piyasa, k 1, R 2, H 15.
   Uyumsuzluk       : Divergence for Many Indicators v4 (10 gosterge); piyasa, k 1, R 2, H 30.
   Trend cizgisi    : Trend Lines v2 cizgi kirilimi (k3_seviye.tlb2; BULGULAR 17); piyasa, k 1, R 2, H 30. Ayrica SAT oku ayri izlenir.
@@ -25,7 +26,7 @@ import k3_seviye
 import katki_testi3 as K3
 from topluluk_sinyal import sma, ema, highest, lowest, pivot
 
-SINYALLER = [("VSP AL", 1.0), ("VSP SAT", 1.0), ("SMA20 dönüşü", 0.0), ("SMA20 kesişimi", 0.0), ("Uyumsuzluk", 0.0), ("Trend çizgisi kırılımı", 0.0), ("Trend çizgisi SAT oku", 0.0)]
+SINYALLER = [("VSP AL", 1.0), ("VSP SAT", 1.0), ("SMA20 kesişimi", 0.0), ("Uyumsuzluk", 0.0), ("Trend çizgisi kırılımı", 0.0), ("Trend çizgisi SAT oku", 0.0)]
 
 
 def _sh(x, k):

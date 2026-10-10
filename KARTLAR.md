@@ -1,11 +1,12 @@
 # Vadeli Scalp Pusulası (VSP) — Kartlar
 
-## Tanım Kartı (v6.4.1)
+## Tanım Kartı (v6.4.2)
 
 **Ne yapar:**
 - 1 dakikalık kripto vadeli grafikte **dipten AL, tepeden SAT sinyali**, stop, hedef ve pozisyon büyüklüğü önerir; piyasayı da anlatır.
 - Grafikte tablo ya da kutu yoktur. Bilgi dört yoldan verilir: AL/SAT etiketi ve stop/hedef çizgileri, durum satırı, arka plan rengi, seviye çizgileri.
 - Sinyal, dip ya da tepe oluştuktan sonra mum kapanışında gelir; geriye dönük değişmez. Dibi önceden bilen (repaint yapmayan) bir gösterge yoktur.
+- **Renk kuralı:** Destek niteliğindeki her şey **yeşil**, direnç niteliğindeki her şey **kırmızı**. Çizimler varsayılan olarak **%50 parlaklıkta**.
 
 **AL/SAT (mum kapanışında, geriye dönük değişmez):**
 
@@ -39,27 +40,41 @@
 
 | Renk | Anlamı |
 |---|---|
-| Mor | Olağandışı oynaklık: zamanlanmış olay, aşırı mumdan (> 4 ATR) sonraki 4 mum ya da iki yönde sert akış. Oynaklık normalin yaklaşık 1,5–2,5 katı (olaya göre daha yüksek olabilir). |
-| Kırmızı | FOMC açıklamasının ilk 6 dakikası (normalin yaklaşık 4–7 katı) ve CPI / İstihdam Raporu (NFP) günlerinde 08:30 mumu (normalin yaklaşık 6–11 katı). |
+| Açık mor | Olağandışı oynaklık: zamanlanmış olay, aşırı mumdan (> 4 ATR) sonraki 4 mum ya da iki yönde sert akış. Oynaklık normalin yaklaşık 1,5–2,5 katı (olaya göre daha yüksek olabilir). |
+| Koyu mor | FOMC açıklamasının ilk 6 dakikası (normalin yaklaşık 4–7 katı) ve CPI / İstihdam Raporu (NFP) günlerinde 08:30 mumu (normalin yaklaşık 6–11 katı). |
 | Turuncu | Sert satış akışının hemen ardındaki mum. Bu mumda SHORT açmak ortalamada dezavantajlı başlar. |
 
 **Zamanlanmış oynaklık anları:**
 
 | Olay | ET | TSİ (ABD yaz / kış saati) | Günler | Arka plan | Oynaklık (normalin katı) |
 |---|---|---|---|---|---|
-| CPI ya da İstihdam Raporu (NFP) | 08:30 | 15:30 / 16:30 | Listedeki günler | 08:30 kırmızı; 08:30–08:38 mor | 08:30'da ×6–11; 08:38'e kadar ×1,6–3,4 |
-| Diğer ABD verisi | 08:30 | 15:30 / 16:30 | Diğer Sal–Cum | Yalnızca 08:30 mumu mor | ×1,5–2,0 (çoğu gün sakin; ortalamayı PPI gibi veri günleri yükseltir) |
-| NY borsa açılışı | 09:30 | 16:30 / 17:30 | Pzt–Cum | 09:30–09:43 mor | İlk dakikalar ×1,9–2,2; ilk saat ortalaması ×1,6 |
-| ABD verisi | 10:00 | 17:00 / 18:00 | Pzt–Cum | 10:00–10:08 mor | ×1,9–2,1 |
-| Haftalık vadeli açılışı | Pazar 18:00 | Pazartesi 01:00 / 02:00 | Pazar | 18:00–18:07 mor | ×2,4–4,3 |
-| FOMC açıklaması | 14:00 | 21:00 / 22:00 | Yalnızca FOMC günleri | 13:59–14:44 mor; 14:00–14:05 kırmızı | 14:00'te ×7; ilk 6 dk ×3,9; 14:44'e kadar ×2,4–2,6 (14:30 basın toplantısı dahil) |
+| CPI ya da İstihdam Raporu (NFP) | 08:30 | 15:30 / 16:30 | Listedeki günler | 08:30 koyu mor; 08:30–08:38 açık mor | 08:30'da ×6–11; 08:38'e kadar ×1,6–3,4 |
+| Diğer ABD verisi | 08:30 | 15:30 / 16:30 | Diğer Sal–Cum | Yalnızca 08:30 mumu açık mor | ×1,5–2,0 (çoğu gün sakin; ortalamayı PPI gibi veri günleri yükseltir) |
+| NY borsa açılışı | 09:30 | 16:30 / 17:30 | Pzt–Cum | 09:30–09:43 açık mor | İlk dakikalar ×1,9–2,2; ilk saat ortalaması ×1,6 |
+| ABD verisi | 10:00 | 17:00 / 18:00 | Pzt–Cum | 10:00–10:08 açık mor | ×1,9–2,1 |
+| Haftalık vadeli açılışı | Pazar 18:00 | Pazartesi 01:00 / 02:00 | Pazar | 18:00–18:07 açık mor | ×2,4–4,3 |
+| FOMC açıklaması | 14:00 | 21:00 / 22:00 | Yalnızca FOMC günleri | 13:59–14:44 açık mor; 14:00–14:05 koyu mor | 14:00'te ×7; ilk 6 dk ×3,9; 14:44'e kadar ×2,4–2,6 (14:30 basın toplantısı dahil) |
 
 - ABD yaz saati Mart'ın ikinci Pazarından Kasım'ın ilk Pazarına kadar sürer. Gösterge bunu otomatik hesaba katar.
 - ABD tatilleri (2028 sonuna kadar) ve FOMC tarihleri (2027 sonu, 2028 Ocak) gösterge içinde tanımlıdır.
-- **CPI/NFP tarihleri 10 Aralık 2026'ya kadar tanımlıdır.** Sonrasında 08:30 yalnızca mor kalır (eski davranış). Resmî 2027 takvimi yayımlanınca liste güncellenecek.
+- **CPI/NFP tarihleri 10 Aralık 2026'ya kadar tanımlıdır.** Sonrasında 08:30 yalnızca açık mor kalır (eski davranış). Resmî 2027 takvimi yayımlanınca liste güncellenecek.
 
-**Çizgiler (en kalın, açık renk):**
-- **SMA20 (yönüne göre yeşil / kırmızı):** Rengin döndüğü an ve fiyatın çizgiyi mum içinde kesmesi, 22 paritede iki yılda da küçük ama tutarlı brüt kazanç verdi (yön dönüşü +0,5 / +0,3 bp, kesişim +0,2 / +0,2 bp). VSP AL'ın (+3,7 / +1,4 bp) onda biri kadar; ana sinyal değil, yön bilgisi. Ayarlar → Görünüm'den kapatılabilir.
+**Çizgiler ve işaretler (destek yeşil, direnç kırmızı):**
+
+| Öğe | Yeşil (destek) | Kırmızı (direnç) | Biçim |
+|---|---|---|---|
+| VWAP | Fiyatın altında | Fiyatın üstünde | Düz, kalın |
+| VWAP ±2σ bantları | Fiyatın altında | Fiyatın üstünde | Kesik, ince |
+| SMA20 | Fiyatın altında | Fiyatın üstünde | Düz, ince |
+| Önceki gün yüksek / düşük | Fiyatın altında | Fiyatın üstünde | Noktalı, kalın |
+| Asya seansı yüksek / düşük | Fiyatın altında | Fiyatın üstünde | Kesik, kalın |
+| Trend çizgisi | Yükselen (altta) | Düşen (üstte) | Düz |
+| Etiket ve işaretler | AL, pozitif uyumsuzluk, yukarı ok | SAT, negatif uyumsuzluk, aşağı ok | |
+
+- Fiyat bir seviyeyi kırınca rengi kendiliğinden değişir; örneğin kırılan önceki gün yükseği kırmızıdan yeşile döner (direnç desteğe dönüşür).
+- **Stop kırmızı, hedef yeşil** kalır ve seviyelerle karışmasın diye noktalı çizilir. Bunlar işlem seviyesidir, destek/direnç değildir; AL işleminde stop altta kırmızı, hedef üstte yeşil görünür.
+- **Parlaklık:** Bütün çizimler varsayılan olarak %50 parlaklıkta (Ayarlar → Görünüm → Çizim parlaklığı, %10–100). Arka planlar da aynı oranda soluklaşır. Durum satırındaki sayılar okunabilsin diye tam parlaklıkta; AL/SAT etiketindeki yazı beyaz.
+- **SMA20:** Testte mumun SMA20'yi kesmesi (açılış bir yanda, kapanış öbür yanda) iki yılda da küçük ama tutarlı brüt kazanç verdi (+0,2 / +0,2 bp); renk dönüşü bu kesişime yakındır. Bu kazanç VSP AL'ın (+3,8 / +1,4 bp) onda biri kadar; ana sinyal değil. SMA20'nin yön dönüşü (+0,5 / +0,3 bp, iki SMA20 bulgusundan güçlüsü) v6.4.2'den beri gösterilmiyor; izlemede son 12 ayda t ≥ 3 olursa ayrı işaretle geri alınacak. Ayarlar → Görünüm'den kapatılabilir.
 - **Uyumsuzluk üçgenleri:** 10 göstergede (MACD, MACD histogram, RSI, Stokastik, CCI, Momentum, OBV, VW-MACD, CMF, MFI) normal uyumsuzluk bulunan ilk mumda; yeşil üçgen mumun altında pozitif, kırmızı üçgen mumun üstünde negatif uyumsuzluk. Testte iki yılda da küçük ama tutarlı brüt kazanç (+0,3 / +0,5 bp). Kazancın tamamı kırmızı üçgende (tepede negatif uyumsuzluk, +1,0 / +0,9 bp); yeşil üçgen ortalamada sıfıra yakın. Uyumsuzluk 5 mumluk pivot onayıyla birkaç mum gecikmeli bilinir; üçgen, bilindiği mumda çizilir. Ayarlar → Görünüm'den kapatılabilir.
 - **Trend çizgileri ve kırılım okları (Trend Lines v2):** Son 3 pivottan (20 mum) geçen ve o ana kadar hiçbir kapanışın kırmadığı çizgiler. Yükselen çizgi yeşil, düşen kırmızı; çizgi bir sonraki mumun kırılım seviyesine kadar uzanır. Kapanış yükselen çizginin altına inerse kırmızı **aşağı ok (SAT)**, düşen çizginin üstüne çıkarsa yeşil **yukarı ok (AL)**. Kırılımdan sonra çizgi kaybolur.
   - Testte (piyasa girişi, stop 1σ, hedef 2R, en fazla 30 dk) iki yılda da brüt kazanç: +1,3 / +0,7 bp. 2026'da kazancın tamamı SAT okunda (+1,5 bp). Yani AL etiketinin zayıf kaldığı **tepeden satış** tarafını tamamlar.
@@ -67,9 +82,6 @@
   - Canlı mumda çizgi, o mumun kapanışında sınanan seviyeyi gösterir; mum içinde yer değiştirmez.
   - Pivotlar testteki eşitlik kuralıyla hesaplanır (iki eşit tepeden öndeki sayılır, sonraki sayılmaz). TradingView'in yerleşik pivot fonksiyonu eşit tepelerde farklı davranabildiği için, orijinal Trend Lines v2 göstergesiyle birkaç çizgi farklı olabilir. VSP testte ölçülen çizgileri çizer. Uyumsuzluk üçgenleri de aynı kuralı kullanır.
   - Ayarlar → Görünüm'den kapatılabilir.
-- VWAP (sarı, düz) ve ±2σ bantları (açık sarı, kesik).
-- Önceki gün yüksek/düşük (beyaz, noktalı).
-- Asya seansı yüksek/düşük (açık mor, kesik).
 - Seviye çizgileri (VWAP, önceki gün, Asya) yalnızca bilgi içindir; testlerde hiçbiri rastgele seviyelerden daha iyi tutmadı.
 
 **Maliyet:**
@@ -99,9 +111,9 @@
   - Sert satış akışının ilk mumu kapandıktan sonra SHORT açan, 5 dakika içinde ortalama 3,3–5,3 baz puan geride kalır (paritelerin %95–100'ünde). 15 dakikada 3,4–5,7 baz puan (paritelerin %86–91'inde), ancak bu ufukta istatistiksel olarak zayıf.
   - Etki bir mum sonra kaybolur.
   - Sert alıştan sonra LONG için böyle bir etki yok; bu yüzden o uyarı kaldırıldı.
-- **Olağandışı oynaklık (mor ve kırmızı):**
+- **Olağandışı oynaklık (açık ve koyu mor):**
   - Zamanlanmış olaylar yukarıdaki tablodaki gibi.
-  - CPI/NFP günleri 08:30'daki fazlalığın yarısından çoğunu taşır; ancak 2026'da bu günlerin yaklaşık %17'si sakin geçti. Kırmızı tipik durumu gösterir, her seferinde olacağı garanti değil.
+  - CPI/NFP günleri 08:30'daki fazlalığın yarısından çoğunu taşır; ancak 2026'da bu günlerin yaklaşık %17'si sakin geçti. Koyu mor tipik durumu gösterir, her seferinde olacağı garanti değil.
   - Aşırı mumdan sonraki 4 mum ×1,5–2,6 (mum mum azalarak).
   - İki yönde sert akış ×2,1.
 - **v5.6'da veriyle sınanıp kaldırılanlar:**
@@ -121,7 +133,7 @@
   - Oynaklık, beklenen hareket ve turuncu uyarı: "TUTUYOR".
   - Trend çizgisi kırılımı: "TUTUYOR" (+0,8 bp, t 2,7). SAT oku +1,4 bp (t 3,1).
   - AL etiketi: "ZAYIFLADI". Hâlâ pozitif (+2,1 bp), ama son 12 ayda istatistiksel güven düşük (t 1,3).
-  - SMA20 ve uyumsuzluk: "ZAYIFLADI" (+0,1 ile +0,3 bp, t 1,0–1,5).
+  - SMA20 kesişimi (renk dönüşü) ve uyumsuzluk: "ZAYIFLADI" (+0,1 / +0,3 bp, t 1,0–1,3). SMA20 yön dönüşü görünümde yok, izleniyor (+0,3 bp, t 1,5).
   - **SAT etiketi: "BOZULDU"** (0,0 bp; bir önceki pencerede "ZAYIFLADI"). Kurala göre Kasım 2026 kontrolünde de bozuk çıkarsa göstergeden kaldırılacak. Tepeden satış için trend çizgisi SAT okunu kullanın.
 
 ## Talimat Kartı
@@ -143,11 +155,11 @@
    - Sayılar görünmüyorsa: Grafik ayarları → **Durum satırı** → **Gösterge değerleri** kutusunu işaretleyin.
    - Ek değerler için sağ kenar çubuğundaki **Veri Penceresi**'ni açın.
 9. **Arka plan:**
-   - Mor: Oynaklık olağandışı; fiyat normalden sert oynar.
-   - Kırmızı: FOMC'nin ilk dakikaları ya da CPI/NFP günü 08:30 mumu.
+   - Açık mor: Oynaklık olağandışı; fiyat normalden sert oynar.
+   - Koyu mor: FOMC'nin ilk dakikaları ya da CPI/NFP günü 08:30 mumu (en sert anlar).
    - Turuncu: O mumda SHORT kovalamak ortalamada dezavantajlı başlar.
    - Arka planlar Ayarlar → **Görünüm** bölümünden kapatılabilir.
-10. **Stil:** Çizgiler varsayılan olarak en kalın ve açık renklidir. Ayarlar → **Stil** sekmesinden değiştirebilirsiniz.
+10. **Renk ve parlaklık:** Destek yeşil, direnç kırmızı; çizimler varsayılan olarak %50 parlaklıkta. Parlaklığı Ayarlar → **Görünüm** → **Çizim parlaklığı** ile değiştirebilirsiniz. Tek tek çizgileri Ayarlar → **Stil** sekmesinden değiştirmeyin; renkler fiyatın konumuna göre otomatik değişir.
 11. **Alarmlar:**
    - Koşul VSP → "AL", "SAT", "Trend çizgisi kırılımı AL", "Trend çizgisi kırılımı SAT", "Sert satış akışı" ya da "Olağandışı oynaklık".
    - Alarmlar yalnızca mum kapanışında tetiklenir.

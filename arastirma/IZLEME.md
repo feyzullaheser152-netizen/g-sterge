@@ -2,7 +2,7 @@
 
 Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosya `arastirma/izleme.py` ile üretilir: Göstergenin dayandığı her bulgu ay ay yeniden ölçülür.
 
-- **Son çalıştırma:** 2026-10-10 16:08 UTC
+- **Son çalıştırma:** 2026-10-10 20:44 UTC
 - **Veri:** 22 Binance USDT-M paritesi, 2025-01 – 2026-10-08.
 - **Durum pencereleri (yalnızca tam aylar):** son 3 tam ay (2026-07 – 2026-09); turuncu uyarı ve FOMC için son 12 tam ay (2025-10 – 2026-09). Eksik ay seride gösterilir, duruma girmez: 2026-10.
 - **Yenileme:** `python3 arastirma/izleme.py guncelle`, ardından `python3 arastirma/izleme.py rapor`. Her ay başında çalıştırılmalı.
@@ -18,7 +18,6 @@ Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosy
 | Turuncu: SHORT kovalama, 15 dk kayıp | +5,08 bp (t 2,0) | **TUTUYOR** | TUTUYOR | son 12 tam ay; aynı |
 | Sinyal: VSP AL, brüt bp / işlem | +2,14 bp (t 1,3; n 11585) | **ZAYIFLADI** | ZAYIFLADI | son 12 tam ay; ≥ +1 bp ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
 | Sinyal: VSP SAT, brüt bp / işlem | -0,00 bp (t -0,0; n 12974) | **BOZULDU** | ZAYIFLADI | son 12 tam ay; ≥ +1 bp ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
-| Sinyal: SMA20 dönüşü, brüt bp / işlem | +0,28 bp (t 1,5; n 397635) | **ZAYIFLADI** | ZAYIFLADI | son 12 tam ay; > 0 ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
 | Sinyal: SMA20 kesişimi, brüt bp / işlem | +0,11 bp (t 1,0; n 469222) | **ZAYIFLADI** | ZAYIFLADI | son 12 tam ay; > 0 ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
 | Sinyal: Uyumsuzluk, brüt bp / işlem | +0,26 bp (t 1,3; n 363016) | **ZAYIFLADI** | ZAYIFLADI | son 12 tam ay; > 0 ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
 | Sinyal: Trend çizgisi kırılımı, brüt bp / işlem | +0,82 bp (t 2,7; n 105910) | **TUTUYOR** | TUTUYOR | son 12 tam ay; > 0 ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu |
@@ -41,6 +40,7 @@ Piyasa değişir; bir özellik zamanla güçlenebilir ya da bozulabilir. Bu dosy
 
 | Ölçü | Değer | Sonuç | Kural |
 |---|---|---|---|
+| SMA20 yön dönüşü (v6.4.2'den beri görünümde yok) | +0,28 bp (t 1,5) | gerek yok | son 12 tam ay; brüt > 0 ve t ≥ 3 olursa ayrı işaretle geri alınması düşünülür |
 | LONG kovalama, 5 dk kayıp (göstergede yok) | +1,18 bp (t 0,9) | gerek yok | son 12 tam ay; ≥ +1 bp ve t ≥ 2 olursa ön kayıtlı testle yeniden sına |
 | Yapısal stop: son 10 mum dibi/tepesi − 0,1σ, R farkı (göstergede yok) | +0,021 R (t 1,5) | gerek yok | son 12 tam ay; 2σ stopa göre ≥ +0,01 R ve t ≥ 3 olursa ön kayıtlı testle yeniden sına |
 | Fonlama −3..+2 dk (göstergede yok) | ×1,02 | gerek yok | son 3 tam ay; ≥ ×1,5 olursa yeniden sına |

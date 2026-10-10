@@ -829,3 +829,15 @@ Kullanıcı: "6 katmanın yeterli olduğundan emin misin?" Katmanlar 12'ye çık
 - **Düşük riskler:**
   - Döngü yükü 5.000 mumda en fazla yaklaşık 2,9 milyon yineleme. Zaman aşımı olası görünmüyor ama TradingView'da ölçülmedi. Kapatılan katmanın hesabı artık duruyor.
   - Canlı mumda çizilen çizgi o mumun kapanışında sınanan seviyeyi gösteriyor (v6.4.1).
+
+**Kullanıcı isteğiyle görünüm (v6.4.2):**
+- Kullanıcının isteği: "Destek niteliğinde olan her şey yeşil, direnç niteliğinde olan her şey kırmızı olsun; her şeyin parlaklığı %50 olsun."
+- **Seviyeler:** VWAP ve ±2σ bantları, önceki gün yüksek/düşük, Asya yüksek/düşük ve SMA20 fiyatın altındaysa yeşil (destek), üstündeyse kırmızı (direnç). Kırılan seviyenin rengi kendiliğinden döner.
+- **İşaretler:** Yükselen trend çizgisi, AL etiketi, pozitif uyumsuzluk ve yukarı ok yeşil. Düşen trend çizgisi, SAT, negatif uyumsuzluk ve aşağı ok kırmızı.
+- **Ayırt etme:** Seviyeler artık aynı iki renkte olduğu için çizgi biçimi ve kalınlıkla ayrılıyor.
+- **Parlaklık:** Tek bir girdi var (varsayılan %50). Saydamlığa çevriliyor; arka planlar da aynı oranda soluklaşıyor. Durum satırı tam parlaklıkta kalıyor.
+- **İstisnalar:**
+  - FOMC/CPI arka planı kırmızıdan koyu mora alındı. Çizimlerde kırmızı direnç demek olduğu için arka planda kırmızı kullanılmıyor.
+  - Turuncu arka plan daha doygun bir tona alındı; soluklaşınca griye dönmesin diye.
+  - Stop kırmızı, hedef yeşil kaldı; bunlar işlem seviyesi. VWAP ile karışmasınlar diye noktalı çiziliyorlar.
+- **SMA20:** Rengi artık konuma göre; renk dönüşü fiyatın SMA20'yi kesmesini gösteriyor. Yön dönüşü sinyali (+0,5 / +0,3 bp) görünümden çıktı ve izlenenler listesine alındı.
