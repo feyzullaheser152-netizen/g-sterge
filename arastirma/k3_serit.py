@@ -32,12 +32,15 @@ Pine anlamına uyum notları:
   - VFI: typical = hlc3; inter = log(typical) - log(typical[1]); vinter = stdev(inter, 30) (nüfus sapması, ddof = 0);
     cutoff = coef * vinter * close; vave = sma(volume, 130)[1]; vmax = vave * vcoef; vc = volume < vmax ? volume : vmax
     (vmax na iken karşılaştırma yanlış -> vc = vmax = na); mf = typical - typical[1]; vcp = mf > cutoff ? vc : mf < -cutoff ? -vc : 0
-    (cutoff na iken 0); vfi = sum(vcp, 130) / vave (pencerede na varsa na; ma() özdeşlik); vfima = ema(vfi, 5) (vfi na iken na).
+    (cutoff na iken 0); vfi = sum(vcp, 130) / vave (pencerede na varsa na; ma() özdeşlik); vfima = ema(vfi, 5) Pine ta.ema gibi na'ya
+    duyarlı (ema_pine_na): vfi na iken na; önceki değer na ise sma(vfi, 5) tohumu (son 5 değerin hepsi geçerli olmalı). Böylece vfi'de
+    na boşluğu olursa (ör. 130+ mum sıfır hacim -> vave = 0) vfima Pine'daki gibi yeniden tohumlanır, eski durumdan sürmez.
     Verideki en uzun sıfır hacim dizisi 19 mum (< 130) olduğundan ısınmadan sonra vave > 0 ve vfi hep tanımlı.
   - Her değer yalnızca t ve önceki mumların verisiyle hesaplanır (repaint yok); sinyaller mum kapanışında.
 """
 import os, sys
 import numpy as np, pandas as pd
+from numba import njit
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from topluluk_sinyal import rma, ema, sma, stdev, highest, lowest, cross_up, cross_dn, true_range, pivot
 
@@ -69,6 +72,31 @@ def renge_doner(col, hedef):
     return out
 
 
+@njit(cache=True)
+def ema_pine_na(x, n):
+    """Pine ta.ema (belgedeki pine_ema): önceki değer na ise sma(x, n) tohumu (pencerede na varsa na), aksi alfa*x + (1-alfa)*önceki (x na ise na)."""
+    a = 2.0 / (n + 1)
+    out = np.full(len(x), np.nan)
+    prev = np.nan
+    for t in range(len(x)):
+        if np.isnan(prev):
+            if t >= n - 1:
+                s = 0.0
+                ok = True
+                for i in range(n):
+                    xi = x[t - i]
+                    if np.isnan(xi):
+                        ok = False
+                        break
+                    s += xi
+                if ok:
+                    out[t] = s / n
+        else:
+            out[t] = a * x[t] + (1 - a) * prev
+        prev = out[t]
+    return out
+
+
 def vfi_hesap(h, l, c, v, length=130, coef=0.2, vcoef=2.5, siglen=5):
     typ = (h + l + c) / 3.0
     lt = np.log(typ)
@@ -85,7 +113,7 @@ def vfi_hesap(h, l, c, v, length=130, coef=0.2, vcoef=2.5, siglen=5):
     with np.errstate(invalid="ignore", divide="ignore"):
         vfi = top / vave
     vfi = np.where(np.isfinite(vfi), vfi, np.nan)
-    vfima = np.where(np.isnan(vfi), np.nan, ema(vfi, siglen))
+    vfima = ema_pine_na(vfi, siglen)
     return vfi, vfima
 
 

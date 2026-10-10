@@ -15,8 +15,9 @@ Pine anlamina uyum notlari:
     TUp/TDown her mumda na ile baslar; TUp[1]/TDown[1] ilk mumda na, karsilastirmalar yanlis. Trend onceki mumun TDown[1]/TUp[1] degerini kullanir;
     nz(Trend[1], 1). max/min'e na girerse sonuc na.
   - AT: nz(AlphaTrend[1]) ilk mumda 0. ta.mfi(hlc3, 14): upper = sum(v * (change <= 0 ? 0 : src)), lower = sum(v * (change >= 0 ? 0 : src));
-    ilk mumda change na oldugundan iki toplam da v*src alir (Pine'daki gibi). lower = 0 ise Pine'da bolme na verir -> mfi na -> 'mfi >= 50' yanlis
-    (downT dali). color1: AT > AT[2] yesil, AT < AT[2] kirmizi, aksi halde AT[1] > AT[3] yesil, degilse kirmizi.
+    ilk mumda change na oldugundan iki toplam da v*src alir (Pine'daki gibi). lower = 0 ve upper > 0 ise bolme IEEE gibi +sonsuz verir ->
+    mfi = 100 -> 'mfi >= 50' dogru (upT dali; yerlesik ta.mfi yerel koddur, MFI tanimi da 100'dur; TradingView belgesi bu durumu yazmiyor, kesin degil).
+    upper = lower = 0 ise 0/0 = na -> yanlis (downT dali). Etki: BTC'de mumlarin ~%0,04'u. color1: AT > AT[2] yesil, AT < AT[2] kirmizi, aksi halde AT[1] > AT[3] yesil, degilse kirmizi.
     BUY etiketi: buySignalk ve O1 > K2; SELL etiketi: sellSignalk ve O2 > K1 (ta.barssince; hic olmadiysa na -> yanlis).
   - Her deger yalnizca t ve oncesi mumlarin verisiyle hesaplanir (repaint yok); sinyaller mum kapanisinda.
 """
@@ -158,8 +159,8 @@ def pine_mfi(src, v, n):
     dn_t = np.where(ch >= 0, 0.0, src)
     upper = pd.Series(v * up_t).rolling(n).sum().to_numpy()
     lower = pd.Series(v * dn_t).rolling(n).sum().to_numpy()
-    lower = np.where(lower == 0, np.nan, lower)  # Pine: sifira bolme na
-    return 100.0 - 100.0 / (1.0 + upper / lower)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        return 100.0 - 100.0 / (1.0 + upper / lower)  # IEEE: x/0 = +sonsuz -> 100; 0/0 = nan -> 'mfi >= 50' yanlis
 
 
 def alphatrend(h, l, c, v, coeff=1.0, ap=14):
