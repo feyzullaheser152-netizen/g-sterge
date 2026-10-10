@@ -243,6 +243,8 @@ def rapor():
         V.append(a); E.append(b); K.append(c); son_ts = max(son_ts, lt)
         print("tamam", s, file=sys.stderr, flush=True)
     V, E, K = pd.concat(V), pd.concat(E), pd.concat(K)
+    import izleme_sinyal as IS
+    T = IS.hesapla()  # gostergedeki sinyallerin islemleri (brut bp)
     G = V.groupby("ay").sum(numeric_only=True)
     aylar = sorted(G.index)
     sonraki = lambda a: (pd.Period(a, "M") + 1).start_time.tz_localize("UTC").timestamp()
@@ -278,6 +280,12 @@ def rapor():
             ("Turuncu: SHORT kovalama, 5 dk kayıp", f"{tr(s5[0], 2, True)} bp (t {tr(s5[2], 1)}; parite %{(ps > 0).mean() * 100:.0f}); son 3 ay {tr(s5_3[0], 2, True)}", durum(s5[0], 1.0, 0.0), "son 12 tam ay; ≥ +1 bp tutuyor, 0–1 zayıfladı, < 0 bozuldu"),
             ("Turuncu: SHORT kovalama, 15 dk kayıp", f"{tr(s15[0], 2, True)} bp (t {tr(s15[2], 1)})", durum(s15[0], 1.0, 0.0), "son 12 tam ay; aynı"),
         ]
+        T12 = T[T.ay.isin(w12)]
+        for ad, esik in IS.SINYALLER:
+            x = T12[T12.sinyal == ad]
+            mm, tt = IS.kume_t(x.brut, x.gun)
+            kural = "≥ +1 bp ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu" if esik else "> 0 ve t ≥ 2 tutuyor, > 0 zayıfladı, ≤ 0 bozuldu"
+            sat.append((f"Sinyal: {ad}, brüt bp / işlem", f"{tr(mm, 2, True)} bp (t {tr(tt, 1)}; n {len(x)})", IS.durum(mm, tt, esik), "son 12 tam ay; " + kural))
         for k in KATS:
             if k.startswith("Fonlama"):
                 continue
@@ -329,6 +337,9 @@ def rapor():
     for k, kisa in (("CPI/NFP 08:30", "CPI/NFP"), ("Diğer Sal–Cum 08:30", "08:30 diğer"), ("NY açılışı 09:30–09:43", "09:30"), ("ABD verisi 10:00–10:08", "10:00"), ("Pazar 18:00–18:07", "Pazar"), ("FOMC 13:59–14:44", "FOMC"), ("Aşırı mum sonrası 4 mum", "Aşırı mum"), ("İki yönde sert akış", "İki yön"), ("Fonlama −3..+2 dk", "Fonlama")):
         seri[kisa] = oran[k]
     seri["Hareket ≥ maliyet %"] = kap["hm"]
+    tb = T.groupby(["ay", "sinyal"]).brut.mean().unstack("sinyal")
+    for ad, kisa in (("VSP AL", "AL bp"), ("VSP SAT", "SAT bp"), ("SMA20 dönüşü", "SMA20 dön. bp"), ("SMA20 kesişimi", "SMA20 kes. bp"), ("Uyumsuzluk", "Uyumsuzluk bp")):
+        seri[kisa] = tb[ad] if ad in tb else np.nan
     bic = {"%50 kapsama": 1, "%80 kapsama": 1, "Sarı %80 kapsama": 1, "SHORT kov. 5 dk": 1, "SHORT n": 0, "LONG kov. 5 dk": 1, "Hareket ≥ maliyet %": 0}
     md = []
     md.append("# VSP İzleme (yeniden doğrulama)\n")
@@ -353,7 +364,7 @@ def rapor():
     md.append("- Kural: Ondalık RMS küçülmeli; genel %80 ve %50 kapsama sapması mevcut modelden en fazla 0,5 puan büyük olabilir.")
     md.append(f"- {karisim}\n")
     md.append("## Aylık seri\n")
-    md.append("Oynaklık sütunları ×normal (ayın tüm mumlarına göre). Kovalama sütunları bp (pozitif = o yönde kovalayan ortalamada geride). \"Hareket ≥ maliyet %\": 15 dk tipik hareketin %0,08 maliyeti (maker + taker + kayma) geçtiği anların oranı.\n")
+    md.append("Oynaklık sütunları ×normal (ayın tüm mumlarına göre). Kovalama sütunları bp (pozitif = o yönde kovalayan ortalamada geride). Sinyal sütunları (AL, SAT, SMA20, Uyumsuzluk) brüt bp / işlem; ayarlar `izleme_sinyal.py` başında. \"Hareket ≥ maliyet %\": 15 dk tipik hareketin %0,08 maliyeti (maker + taker + kayma) geçtiği anların oranı.\n")
     md.append("| Ay | " + " | ".join(seri.columns) + " |")
     md.append("|---" * (len(seri.columns) + 1) + "|")
     for a, row in seri.iterrows():
