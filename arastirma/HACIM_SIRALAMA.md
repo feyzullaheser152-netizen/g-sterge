@@ -9,7 +9,7 @@
 | 1 | BTCUSDT | 32.437,1 | 2019-09 | işlemde |
 | 2 | ETHUSDT | 19.300,3 | 2019-11 | işlemde |
 | 3 | SOLUSDT | 4.367,4 | 2020-09 | işlemde |
-| 4 | .RPUSDT | 2.709,5 | 2020-01 | işlemde |
+| 4 | XRPUSDT | 2.709,5 | 2020-01 | işlemde |
 | 5 | DOGEUSDT | 2.206,6 | 2020-07 | işlemde |
 | 6 | BTCUSDC | 1.980,6 | 2024-01 | işlemde |
 | 7 | ETHUSDC | 1.827,4 | 2024-01 | işlemde |
@@ -21,7 +21,7 @@
 | 13 | 1000SHIBUSDT | 766,0 | 2021-05 | işlemde |
 | 14 | ETHBUSD | 750,9 | 2021-06 | kapandı (2023-12-11) |
 | 15 | LTCUSDT | 748,2 | 2020-01 | işlemde |
-| 16 | AVA.USDT | 745,5 | 2020-09 | işlemde |
+| 16 | AVAXUSDT | 745,5 | 2020-09 | işlemde |
 | 17 | DOTUSDT | 611,9 | 2020-08 | işlemde |
 | 18 | ETCUSDT | 611,4 | 2020-01 | işlemde |
 | 19 | SUIUSDT | 606,9 | 2023-05 | işlemde |
