@@ -8,6 +8,8 @@ Gostergeler (kullanici Ekim 2026'da gonderdi; daha once sinanmadilar):
   k5_shaakuni : Shaakuni - Liquidity Levels & Order Blocks v1.4.0 (MPL 2.0). Yalnizca Order Block kismi (yapi kirilimi + ATR itki + tazelik kurali).
                 Onceki gun/hafta uclari ve %50 (EQ) seviyeleri daha once sinandi (BULGULAR 7, 9, 10e; rastgele seviyelerden iyi degil), onceki gun
                 supurmesi de (isaret yillar arasinda degisiyor); tekrarlanmaz.
+  k5_vdelta   : Volume Delta Pivot Matrix [BigBeluga] (CC BY-NC-SA 4.0). Pivot (5,5) seviyeleri, pivot cevresindeki 11 mumun kapanis konumuyla
+                agirliklandirilmis hacim deltasi; kapanis seviyeyi gecince seviye silinir.
 Mantik uyarlamasi; kod kopyalanmadi, yalnizca arastirma icindir. Her modul bagimsiz bir ajanla Pine koduna karsi dogrulanir (scratchpad/k5_kaynak).
 
 ON KAYIT (sonuclardan once yazildi; esikler katki_testi3 ile ayni).
@@ -27,6 +29,10 @@ Sinyaller (1. katman):
   BFLIP : BOSWaves trend donusu (bullFlip AL / bearFlip SAT).
   SOBY  : Shaakuni yeni OB (boga OB olusunca AL / ayi OB olusunca SAT; olusum mumu = yapi kirilimi mumu).
   SOBM  : Shaakuni OB'nin ilk dokunusu (taze boga OB'ye ilk temas AL / taze ayi OB'ye ilk temas SAT; ikisi birden ise yok).
+  VDPB  : delta pivot seviyesi kirildi (gostergenin silme kosulu: destek icin close <= seviye -> SAT; direnc icin close >= seviye -> AL).
+  VDPT  : dokunus (on kayitla): onceki mumdan kalan aktif destek icin low <= seviye ve close > seviye -> AL; direnc icin high >= seviye ve close < seviye -> SAT.
+  VDPTD : VDPT, yalnizca o anda cizilecek seviyelerle: aktif seviyelerin |delta|'si en buyuk |delta|'nin en az %20'si olanlar, en yeniden
+          eskiye en fazla 10 tane (gostergenin son mumda uyguladigi filtre her mumda o anki aktif seviyelerle).
   Hepsi 54 ayarlik izgarada (TS.sim_izgara). Kural: 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
   Ek (yerel cikis, ayni kural): BFLIP gostergenin kendi pozisyonuyla: sonraki mumun acilisinda giris, NATIVE stop (gostergenin yapisal stopu),
   cikis stop ya da ters donus (donus mumundan sonraki acilis), en fazla 240 mum. R = brut / (stop mesafesi / giris).
@@ -51,10 +57,10 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import katki_testi3 as K3
-import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni
+import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni]
+MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni, k5_vdelta]
 IZGARA = os.environ.get("K5_IZGARA", "1") != "0"
 
 
