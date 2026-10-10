@@ -5,6 +5,9 @@ Gostergeler (kullanici Ekim 2026'da gonderdi; daha once sinanmadilar):
                 Test, SOS/SOW, LPS/LPSY, Faz E) ve kendi LONG/SHORT ENTRY isaretleri (Entry Strictness = Standard, Auto). Ust zaman dilimleri 3, 5, 15 dk.
   k5_zprofil  : Buyers & Sellers Profile + Dynamic S/R [Zeiierman] (CC BY-NC-SA 4.0). Hacim profiliyle yer degistirilmis pivot destek/direncler.
   k5_bosribbon: Trend Target Ribbon [BOSWaves] (MPL 2.0). ALMA + sapma + egim trendi; donus isaretleri, yapisal stop ve 1R-4R hedefler.
+  k5_shaakuni : Shaakuni - Liquidity Levels & Order Blocks v1.4.0 (MPL 2.0). Yalnizca Order Block kismi (yapi kirilimi + ATR itki + tazelik kurali).
+                Onceki gun/hafta uclari ve %50 (EQ) seviyeleri daha once sinandi (BULGULAR 7, 9, 10e; rastgele seviyelerden iyi degil), onceki gun
+                supurmesi de (isaret yillar arasinda degisiyor); tekrarlanmaz.
 Mantik uyarlamasi; kod kopyalanmadi, yalnizca arastirma icindir. Her modul bagimsiz bir ajanla Pine koduna karsi dogrulanir (scratchpad/k5_kaynak).
 
 ON KAYIT (sonuclardan once yazildi; esikler katki_testi3 ile ayni).
@@ -22,6 +25,8 @@ Sinyaller (1. katman):
   ZTCH  : dokunus (gostergede tanimli degil, on kayitla): onceki mumdan kalan aktif destek p icin low <= p ve close > p -> AL;
           direnc icin high >= p ve close < p -> SAT; ikisi birden ise yok.
   BFLIP : BOSWaves trend donusu (bullFlip AL / bearFlip SAT).
+  SOBY  : Shaakuni yeni OB (boga OB olusunca AL / ayi OB olusunca SAT; olusum mumu = yapi kirilimi mumu).
+  SOBM  : Shaakuni OB'nin ilk dokunusu (taze boga OB'ye ilk temas AL / taze ayi OB'ye ilk temas SAT; ikisi birden ise yok).
   Hepsi 54 ayarlik izgarada (TS.sim_izgara). Kural: 2025 R > 0, t >= 2; 2026 R > 0, t >= 3.
   Ek (yerel cikis, ayni kural): BFLIP gostergenin kendi pozisyonuyla: sonraki mumun acilisinda giris, NATIVE stop (gostergenin yapisal stopu),
   cikis stop ya da ters donus (donus mumundan sonraki acilis), en fazla 240 mum. R = brut / (stop mesafesi / giris).
@@ -46,10 +51,10 @@ import topluluk_sinyal as TS
 import katki_testi as K1
 import katki_testi2 as K2
 import katki_testi3 as K3
-import k5_wyckoff, k5_zprofil, k5_bosribbon
+import k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni
 
 KS, RS, HS = sinyal_v6.KS, sinyal_v6.RS, sinyal_v6.HS
-MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon]
+MODS = [k5_wyckoff, k5_zprofil, k5_bosribbon, k5_shaakuni]
 IZGARA = os.environ.get("K5_IZGARA", "1") != "0"
 
 
